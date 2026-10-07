@@ -967,6 +967,7 @@
   ============================================================ -->
   <div id="celebration">
     <section class="celeb-section section">
+      <button class="btn btn--ghost" id="backToMissionBtn" style="margin-bottom:28px;">← Back to mission</button>
       <span class="celeb-eyebrow reveal">Vault unlocked</span>
       <h2 class="headline reveal">Okay. Before anything else —</h2>
       <p class="sub reveal">This part isn't about the exam results. It's about everything before them.</p>
@@ -1228,6 +1229,7 @@
       opening.style.opacity = "0.0";
 
       setTimeout(function(){
+        opening.hidden = true; // remove from flow so it can't leave a blank gap later
         buildStepper();
         buildDayNav();
         selectDay(currentDay);
@@ -1519,116 +1521,51 @@
     }
   });
 
+  var backToMissionBtn = document.getElementById("backToMissionBtn");
+  if (backToMissionBtn){
+    backToMissionBtn.addEventListener("click", returnToMission);
+  }
+
   function unlockCelebration(){
     if (celebrationUnlocked) return;
     celebrationUnlocked = true;
+
+    // Make this its own page: hide the mission flow (stepper, day
+    // tabs, whichever day panel is showing) rather than stacking the
+    // celebration underneath it.
+    var campaignSection = document.getElementById("campaign");
+    var dayNavEl = document.getElementById("dayNav");
+    if (campaignSection) campaignSection.style.display = "none";
+    if (dayNavEl) dayNavEl.style.display = "none";
+    document.querySelectorAll(".day-panel").forEach(function(panel){
+      panel.classList.remove("active");
+    });
+
     celebration.classList.add("unlocked");
     burstConfetti();
     runVictoryShow();
     initScrollReveal();
-    setTimeout(function(){
-      celebration.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" });
-    }, reduceMotion ? 0 : 150);
+    window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
+  }
+
+  function returnToMission(){
+    var campaignSection = document.getElementById("campaign");
+    var dayNavEl = document.getElementById("dayNav");
+    if (campaignSection) campaignSection.style.display = "";
+    if (dayNavEl) dayNavEl.style.display = "";
+    celebration.classList.remove("unlocked");
+    selectDay(currentDay);
+    window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
   }
 
   /* ---------------------------------------------------------
-     VICTORY SHOW — fireworks (with sound) + falling peony
-     confetti, running for ~30 seconds once the vault is unlocked.
+     VICTORY SHOW — fireworks + falling peony confetti, running
+     for ~30 seconds once the vault is unlocked. No audio.
   --------------------------------------------------------- */
-  var audioCtx = null;
-  function getAudioCtx(){
-    var AC = window.AudioContext || window.webkitAudioContext;
-    if (!AC) return null;
-    if (!audioCtx) audioCtx = new AC();
-    if (audioCtx.state === "suspended") audioCtx.resume();
-    return audioCtx;
-  }
-
-  function playFireworkBoom(panValue){
-    var ctx = getAudioCtx();
-    if (!ctx) return;
-    var now = ctx.currentTime;
-
-    var hasPanner = typeof ctx.createStereoPanner === "function";
-    var pan = hasPanner ? ctx.createStereoPanner() : null;
-    if (pan){
-      pan.pan.value = Math.max(-1, Math.min(1, panValue || 0));
-      pan.connect(ctx.destination);
-    }
-    var out = pan || ctx.destination;
-
-    function noiseBurst(opts){
-      // opts: delay, duration, freq, type ("bandpass"/"highpass"/"lowpass"), q, peak
-      var start = now + (opts.delay || 0);
-      var dur = opts.duration;
-      var bufferSize = Math.max(1, Math.floor(ctx.sampleRate * dur));
-      var buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-      var data = buffer.getChannelData(0);
-      for (var i = 0; i < bufferSize; i++){
-        data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 1.6);
-      }
-      var src = ctx.createBufferSource();
-      src.buffer = buffer;
-
-      var filter = ctx.createBiquadFilter();
-      filter.type = opts.type;
-      filter.frequency.value = opts.freq;
-      if (opts.q) filter.Q.value = opts.q;
-
-      var gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.0001, start);
-      gain.gain.exponentialRampToValueAtTime(opts.peak, start + Math.min(0.012, dur * 0.15));
-      gain.gain.exponentialRampToValueAtTime(0.0001, start + dur);
-
-      src.connect(filter).connect(gain).connect(out);
-      src.start(start);
-      src.stop(start + dur);
-    }
-
-    // sharp transient "crack" — the initial snap of the burst
-    noiseBurst({ delay: 0, duration: 0.12, freq: 2800 + Math.random() * 1200, type: "highpass", q: 0.9, peak: 0.38 });
-
-    // deep "boom" body — a wide noise bed filtered low, with a bit of rumble
-    noiseBurst({ delay: 0, duration: 0.55 + Math.random() * 0.2, freq: 450 + Math.random() * 250, type: "lowpass", q: 0.5, peak: 0.3 });
-
-    // sub-bass thump for physical weight
-    var osc = ctx.createOscillator();
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(140, now);
-    osc.frequency.exponentialRampToValueAtTime(38, now + 0.32);
-    var oscGain = ctx.createGain();
-    oscGain.gain.setValueAtTime(0.0001, now);
-    oscGain.gain.exponentialRampToValueAtTime(0.26, now + 0.01);
-    oscGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.36);
-    osc.connect(oscGain).connect(out);
-    osc.start(now);
-    osc.stop(now + 0.36);
-
-    // crackle tail — scattered high, short pops trailing after the main boom,
-    // like the secondary stars breaking apart. Count and timing randomized
-    // per firework so the show doesn't sound mechanically repetitive.
-    var crackleCount = 5 + Math.floor(Math.random() * 6);
-    var tailEnd = 0.1;
-    for (var c = 0; c < crackleCount; c++){
-      var delay = 0.08 + Math.random() * 0.55;
-      tailEnd = Math.max(tailEnd, delay + 0.08);
-      noiseBurst({
-        delay: delay,
-        duration: 0.05 + Math.random() * 0.05,
-        freq: 3500 + Math.random() * 3000,
-        type: "bandpass",
-        q: 1.2,
-        peak: 0.08 + Math.random() * 0.1
-      });
-    }
-  }
-
   function runVictoryShow(){
     if (reduceMotion) return; // burstConfetti() already gave a brief, static-friendly moment
 
-    getAudioCtx(); // warm up / unlock audio within this user-gesture call chain
-
-    var DURATION = 30000;
+    var DURATION = 15000;
     var fwCanvas = document.getElementById("fireworksCanvas");
     var fwCtx = fwCanvas.getContext("2d");
     var fwParticles = [];
@@ -1650,7 +1587,6 @@
       var y = h * (0.15 + Math.random() * 0.4);
       var count = 36 + Math.floor(Math.random() * 24);
       var color = FW_COLORS[Math.floor(Math.random() * FW_COLORS.length)];
-      playFireworkBoom((x / w) * 2 - 1);
       for (var i = 0; i < count; i++){
         var angle = (Math.PI * 2 * i) / count + Math.random() * 0.2;
         var speed = 1.6 + Math.random() * 3.4;
