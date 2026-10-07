@@ -4,21 +4,30 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mission: Steuerberaterin — For Raphaela</title>
-<meta name="description" content="A good-luck mission for Raphaela's Steuerberater exam.">
+<meta name="description" content="A three-day good-luck mission for Raphaela's Steuerberater exam.">
 
-<!-- Google Fonts: a sharp serif for display, a clean grotesk for body/UI. Both have system fallbacks baked into the font-family stacks below, so the page holds up fine if the request fails. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
+<!-- jsPDF: generates the certificate as a real landscape PDF client-side, so the
+     download button produces an actual file with no print dialog in the way.
+     If this fails to load (offline, blocked CDN), the page falls back to the
+     browser's native print-to-PDF automatically — see the script at the bottom. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+<!-- html2canvas: captures the on-screen certificate card exactly as rendered
+     (fonts, gradient, gold border and all), so the downloaded PDF matches the
+     website pixel-for-pixel instead of being redrawn from scratch. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
+
 <style>
   /* ============================================================
      DESIGN TOKENS
-     Deep ink-navy base, bone-white type, a restrained antique-gold
-     accent reserved for the single moment on screen that needs to
-     win the eye. Fraunces (a serif with real editorial weight) for
-     headlines; Manrope for everything functional — labels, UI,
-     body copy. Both fall back gracefully if the webfont stalls.
+     Same ink-navy / gold identity she already knows from Day 1,
+     extended with a soft rose (her favorite baby-pink + the
+     Pfingstrose she told Zohaib about) reserved for the day-system
+     and the secret peony moment, so it reads as a deliberate
+     addition rather than a re-skin.
   ============================================================ */
   :root{
     --ink:        #0A0D12;
@@ -30,6 +39,8 @@
     --bone-faint: #6B7280;
     --gold:       #C9A961;
     --gold-soft:  rgba(201, 169, 97, 0.16);
+    --rose:       #E6B6C0;
+    --rose-soft:  rgba(230, 182, 192, 0.16);
     --ok:         #8FB996;
     --danger:     #C97C6B;
 
@@ -41,11 +52,7 @@
   }
 
   *, *::before, *::after{ box-sizing: border-box; }
-
-  html{
-    scroll-behavior: smooth;
-    -webkit-text-size-adjust: 100%;
-  }
+  html{ scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
 
   @media (prefers-reduced-motion: reduce){
     html{ scroll-behavior: auto; }
@@ -76,9 +83,7 @@
     margin: 0;
     letter-spacing: -0.01em;
   }
-
   p{ margin: 0; }
-
   a{ color: inherit; }
 
   button{
@@ -88,10 +93,9 @@
     background: none;
     color: inherit;
   }
+  button:disabled{ cursor: default; }
 
-  button:focus-visible,
-  a:focus-visible,
-  [tabindex]:focus-visible{
+  button:focus-visible, a:focus-visible, [tabindex]:focus-visible{
     outline: 2px solid var(--gold);
     outline-offset: 3px;
     border-radius: 4px;
@@ -99,12 +103,10 @@
 
   .section{
     position: relative;
-    padding: 96px var(--edge) 96px;
+    padding: 72px var(--edge) 72px;
     max-width: var(--maxw);
     margin: 0 auto;
   }
-
-  .section--wide{ max-width: 920px; }
 
   .eyebrow{
     font-size: 12.5px;
@@ -115,17 +117,10 @@
     display: block;
     margin-bottom: 14px;
   }
+  .eyebrow.rose{ color: var(--rose); }
 
-  .headline{
-    font-size: clamp(28px, 6vw, 44px);
-    margin-bottom: 14px;
-  }
-
-  .sub{
-    color: var(--bone-dim);
-    font-size: 16.5px;
-    max-width: 52ch;
-  }
+  .headline{ font-size: clamp(26px, 5.6vw, 40px); margin-bottom: 12px; }
+  .sub{ color: var(--bone-dim); font-size: 16px; max-width: 54ch; }
 
   .glass{
     background: var(--panel);
@@ -137,13 +132,10 @@
 
   .reveal{
     opacity: 0;
-    transform: translateY(18px);
-    transition: opacity 0.7s ease, transform 0.7s ease;
+    transform: translateY(16px);
+    transition: opacity 0.65s ease, transform 0.65s ease;
   }
-  .reveal.is-visible{
-    opacity: 1;
-    transform: translateY(0);
-  }
+  .reveal.is-visible{ opacity: 1; transform: translateY(0); }
 
   .btn{
     display: inline-flex;
@@ -154,39 +146,26 @@
     font-size: 15px;
     font-weight: 700;
     letter-spacing: 0.01em;
-    transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+    transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease, border-color 0.25s ease, color 0.25s ease;
   }
   .btn:active{ transform: scale(0.97); }
-
   .btn--primary{
     background: var(--gold);
     color: #16130A;
     box-shadow: 0 10px 30px -10px rgba(201,169,97,0.55);
   }
-  .btn--primary:hover{
-    box-shadow: 0 14px 36px -10px rgba(201,169,97,0.7);
-    transform: translateY(-1px);
-  }
-
+  .btn--primary:hover{ box-shadow: 0 14px 36px -10px rgba(201,169,97,0.7); transform: translateY(-1px); }
   .btn--ghost{
     background: transparent;
     border: 1px solid var(--panel-brd);
     color: var(--bone);
   }
   .btn--ghost:hover{ border-color: var(--gold); color: var(--gold); }
+  .btn[disabled]{ opacity: 0.6; }
 
-  .btn[disabled]{ opacity: 0.6; cursor: default; }
+  #particleField{ position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.5; }
 
-  /* ---------- Particle field (shared, behind opening + boss) ---------- */
-  #particleField{
-    position: fixed;
-    inset: 0;
-    z-index: 0;
-    pointer-events: none;
-    opacity: 0.55;
-  }
-
-  /* ---------- SECTION 1 — OPENING ---------- */
+  /* ---------- OPENING ---------- */
   #opening{
     position: relative;
     min-height: 100svh;
@@ -203,8 +182,8 @@
     position: absolute;
     inset: -20%;
     background:
-      radial-gradient(circle at 24% 20%, rgba(201,169,97,0.12), transparent 45%),
-      radial-gradient(circle at 78% 72%, rgba(143,185,150,0.07), transparent 40%);
+      radial-gradient(circle at 24% 20%, rgba(201,169,97,0.11), transparent 45%),
+      radial-gradient(circle at 78% 72%, rgba(230,182,192,0.08), transparent 42%);
     z-index: -1;
     animation: driftBg 22s ease-in-out infinite alternate;
   }
@@ -212,1040 +191,851 @@
     0%{ transform: translate3d(0,0,0) scale(1); }
     100%{ transform: translate3d(-2%, 2%, 0) scale(1.06); }
   }
-
   .open-kicker{
-    font-size: 12.5px;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    color: var(--bone-faint);
-    font-weight: 700;
-    opacity: 0;
-    animation: fadeUp 0.8s ease 0.1s forwards;
+    font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--bone-faint); font-weight: 700;
+    opacity: 0; animation: fadeUp 0.8s ease 0.1s forwards;
+  }
+  .open-day-badge{
+    margin-top: 14px;
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 7px 16px; border-radius: 999px;
+    border: 1px solid var(--panel-brd);
+    font-size: 12px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--gold);
+    opacity: 0; animation: fadeUp 0.8s ease 0.22s forwards;
   }
   .open-name{
     font-family: var(--serif);
-    font-size: clamp(54px, 15vw, 128px);
+    font-size: clamp(50px, 14vw, 116px);
     font-weight: 700;
-    margin: 10px 0 6px;
+    margin: 14px 0 6px;
     background: linear-gradient(180deg, #FBF8F0, var(--gold) 140%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    opacity: 0;
-    animation: fadeUp 0.9s ease 0.3s forwards;
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    opacity: 0; animation: fadeUp 0.9s ease 0.36s forwards;
     letter-spacing: -0.02em;
   }
   .open-exam{
-    font-size: 13.5px;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--bone-dim);
-    font-weight: 700;
-    opacity: 0;
-    animation: fadeUp 0.8s ease 0.5s forwards;
+    font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--bone-dim); font-weight: 700;
+    opacity: 0; animation: fadeUp 0.8s ease 0.5s forwards;
   }
   .open-line{
-    margin-top: 28px;
-    font-family: var(--serif);
-    font-style: italic;
-    font-size: 19px;
-    color: var(--bone);
-    opacity: 0;
-    animation: fadeUp 0.8s ease 0.7s forwards;
+    margin-top: 26px; font-family: var(--serif); font-style: italic; font-size: 18px;
+    color: var(--bone); max-width: 46ch;
+    opacity: 0; animation: fadeUp 0.8s ease 0.68s forwards;
   }
-  .open-cta{
-    margin-top: 44px;
-    opacity: 0;
-    animation: fadeUp 0.8s ease 0.95s forwards;
-  }
+  .open-cta{ margin-top: 40px; opacity: 0; animation: fadeUp 0.8s ease 0.9s forwards; }
   .open-cta .btn{ font-size: 16px; padding: 17px 34px; }
-
-  @keyframes fadeUp{
-    from{ opacity: 0; transform: translateY(14px); }
-    to{ opacity: 1; transform: translateY(0); }
-  }
-
+  @keyframes fadeUp{ from{ opacity:0; transform:translateY(14px);} to{ opacity:1; transform:translateY(0);} }
   .scroll-cue{
-    position: absolute;
-    bottom: 34px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 11px;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--bone-faint);
-    opacity: 0;
-    animation: fadeUp 0.8s ease 1.3s forwards;
+    position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+    font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--bone-faint);
+    opacity: 0; animation: fadeUp 0.8s ease 1.2s forwards;
   }
 
-  /* confetti burst on entering exam mode */
   .confetti-piece{
-    position: fixed;
-    top: -10px;
-    width: 7px;
-    height: 12px;
-    z-index: 50;
-    pointer-events: none;
-    border-radius: 1px;
-    animation: confettiFall linear forwards;
+    position: fixed; top: -10px; width: 7px; height: 12px; z-index: 50;
+    pointer-events: none; border-radius: 1px; animation: confettiFall linear forwards;
   }
-  @keyframes confettiFall{
-    to{ transform: translateY(110vh) rotate(540deg); opacity: 0.2; }
-  }
+  @keyframes confettiFall{ to{ transform: translateY(110vh) rotate(540deg); opacity: 0.2; } }
 
-  /* ---------- SECTION 2 — MISSION CONTROL ---------- */
-  .status-card{
-    margin-top: 28px;
-    padding: 28px;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 22px;
+  /* ---------- CAMPAIGN STEPPER ---------- */
+  #campaign{ padding-top: 56px; padding-bottom: 20px; text-align: center; }
+  .stepper{
+    display: flex; align-items: center; justify-content: center;
+    gap: 0; margin-top: 30px; flex-wrap: wrap;
   }
-  .status-item .k{
-    font-size: 11px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+  .step{
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    width: 92px;
+  }
+  .step .dot{
+    width: 34px; height: 34px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700;
+    border: 1.5px solid var(--panel-brd);
     color: var(--bone-faint);
-    font-weight: 700;
-    display: block;
-    margin-bottom: 8px;
+    background: var(--ink-2);
+    transition: all 0.3s ease;
   }
-  .status-item .v{
-    font-family: var(--serif);
-    font-size: 19px;
-    color: var(--bone);
+  .step.done .dot{ background: var(--gold); border-color: var(--gold); color: #16130A; }
+  .step.current .dot{ border-color: var(--gold); color: var(--gold); box-shadow: 0 0 0 4px var(--gold-soft); }
+  .step.locked .dot{ color: var(--bone-faint); }
+  .step .lb{ font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 700; color: var(--bone-faint); }
+  .step.done .lb, .step.current .lb{ color: var(--bone); }
+  .step-line{ width: 44px; height: 1.5px; background: var(--panel-brd); margin: 0 -2px; transform: translateY(-17px); }
+  .step-line.done{ background: var(--gold); }
+
+  /* ---------- DAY NAV ---------- */
+  .day-nav{
+    position: sticky; top: 0; z-index: 30;
+    display: flex; justify-content: center; gap: 8px;
+    padding: 14px var(--edge);
+    background: rgba(10,13,18,0.72);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--panel-brd);
   }
+  .day-tab{
+    padding: 9px 16px; border-radius: 999px;
+    font-size: 12.5px; font-weight: 700; letter-spacing: 0.04em;
+    border: 1px solid var(--panel-brd);
+    color: var(--bone-faint);
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: all 0.25s ease;
+  }
+  .day-tab[aria-selected="true"]{
+    border-color: var(--gold); color: var(--gold); background: var(--gold-soft);
+  }
+  .day-tab.is-done:not([aria-selected="true"]){ color: var(--bone); }
+  .day-tab .chk{ color: var(--ok); }
+
+  /* ---------- DAY PANEL ---------- */
+  .day-panel{ display: none; }
+  .day-panel.active{ display: block; }
+
+  /* ---------- RECAP CARD (Day 1) ---------- */
+  .recap-card{ padding: 28px; margin-top: 26px; }
+  .recap-status{
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700;
+    color: var(--ok); background: rgba(143,185,150,0.12);
+    padding: 5px 12px; border-radius: 999px; margin-bottom: 18px;
+  }
+  .recap-card h3{ font-size: 21px; margin-bottom: 12px; }
+  .recap-card p{ color: var(--bone-dim); font-size: 15.5px; margin-bottom: 14px; }
+  .recap-card .callback{
+    font-family: var(--serif); font-style: italic; color: var(--bone);
+    font-size: 16px; padding-left: 16px; border-left: 2px solid var(--panel-brd);
+    margin: 18px 0;
+  }
+  .recap-stats{
+    margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--panel-brd);
+    display: grid; grid-template-columns: repeat(3,1fr); gap: 16px;
+  }
+  .recap-stats .k{ font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--bone-faint); font-weight: 700; display: block; margin-bottom: 5px; }
+  .recap-stats .v{ font-family: var(--serif); font-size: 15px; }
+
+  /* ---------- MISSION / STATUS / PROGRESS (shared) ---------- */
+  .status-card{ margin-top: 24px; padding: 26px; display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; }
+  .status-item .k{ font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--bone-faint); font-weight: 700; display: block; margin-bottom: 8px; }
+  .status-item .v{ font-family: var(--serif); font-size: 18px; }
   .status-item .v.gold{ color: var(--gold); }
 
-  .progress-wrap{ margin-top: 40px; }
-  .progress-head{
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 10px;
-  }
-  .progress-head .label{
-    font-size: 11px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--bone-faint);
-    font-weight: 700;
-  }
-  .progress-head .pct{
-    font-family: var(--serif);
-    font-size: 20px;
-    color: var(--gold);
-  }
-  .progress-track{
-    height: 8px;
-    border-radius: 999px;
-    background: rgba(244,240,231,0.08);
-    overflow: hidden;
-  }
-  .progress-fill{
-    height: 100%;
-    width: 0%;
-    border-radius: 999px;
-    background: linear-gradient(90deg, #8FB996, var(--gold));
-    transition: width 1.6s cubic-bezier(.22,.9,.3,1);
-  }
-  .progress-note{
-    margin-top: 16px;
-    color: var(--bone-dim);
-    font-size: 15px;
-  }
+  .progress-wrap{ margin-top: 20px; padding: 24px 26px; }
+  .progress-head{ display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+  .progress-head .label{ font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--bone-faint); font-weight: 700; }
+  .progress-head .pct{ font-family: var(--serif); font-size: 19px; color: var(--gold); }
+  .progress-track{ height: 8px; border-radius: 999px; background: rgba(244,240,231,0.08); overflow: hidden; }
+  .progress-fill{ height: 100%; width: 0%; border-radius: 999px; background: linear-gradient(90deg, #8FB996, var(--gold)); transition: width 1.6s cubic-bezier(.22,.9,.3,1); }
+  .progress-note{ margin-top: 14px; color: var(--bone-dim); font-size: 14.5px; }
 
-  /* ---------- SECTION 3 — EXAM PASS ---------- */
-  .pass{
-    margin-top: 28px;
-    padding: 0;
-    overflow: hidden;
-    position: relative;
-  }
+  /* ---------- EXAM PASS ---------- */
+  .pass{ margin-top: 24px; padding: 0; overflow: hidden; position: relative; }
   .pass-top{
-    padding: 26px 28px 22px;
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    border-bottom: 1px dashed var(--panel-brd);
-    position: relative;
-    overflow: hidden;
+    padding: 24px 26px 20px; display: flex; justify-content: space-between; align-items: flex-start;
+    border-bottom: 1px dashed var(--panel-brd); position: relative; overflow: hidden;
   }
   .pass-top::after{
-    content: "";
-    position: absolute;
-    top: 0; left: -100%;
-    width: 60%; height: 100%;
+    content: ""; position: absolute; top: 0; left: -100%; width: 60%; height: 100%;
     background: linear-gradient(100deg, transparent, rgba(201,169,97,0.14), transparent);
     animation: scanLine 3.2s ease-in-out infinite;
   }
-  @keyframes scanLine{
-    0%{ left: -60%; }
-    55%, 100%{ left: 140%; }
-  }
-  .pass-title{
-    font-size: 11px;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--gold);
-    font-weight: 700;
-  }
+  @keyframes scanLine{ 0%{ left: -60%; } 55%,100%{ left: 140%; } }
+  .pass-title{ font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); font-weight: 700; }
   .pass-status{
-    font-size: 11px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    font-weight: 700;
-    color: var(--ok);
-    padding: 5px 12px;
-    border-radius: 999px;
-    background: rgba(143,185,150,0.12);
+    font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700;
+    color: var(--ok); padding: 5px 12px; border-radius: 999px; background: rgba(143,185,150,0.12);
   }
-  .pass-body{ padding: 24px 28px 28px; }
-  .pass-name{
-    font-family: var(--serif);
-    font-size: 30px;
-    margin-bottom: 4px;
-  }
-  .pass-role{
-    color: var(--bone-dim);
-    font-size: 13.5px;
-    margin-bottom: 22px;
-  }
-  .pass-grid{
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px 20px;
-    margin-bottom: 26px;
-  }
-  .pass-grid .k{
-    font-size: 10.5px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--bone-faint);
-    font-weight: 700;
-    display: block;
-    margin-bottom: 5px;
-  }
-  .pass-grid .v{ font-size: 15px; color: var(--bone); }
-
-  .equip-label{
-    font-size: 10.5px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--bone-faint);
-    font-weight: 700;
-    margin-bottom: 12px;
-    display: block;
-  }
+  .pass-body{ padding: 22px 26px 26px; }
+  .pass-name{ font-family: var(--serif); font-size: 28px; margin-bottom: 4px; }
+  .pass-role{ color: var(--bone-dim); font-size: 13px; margin-bottom: 20px; }
+  .pass-grid{ display: grid; grid-template-columns: 1fr 1fr; gap: 16px 20px; margin-bottom: 24px; }
+  .pass-grid .k{ font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--bone-faint); font-weight: 700; display: block; margin-bottom: 5px; }
+  .pass-grid .v{ font-size: 14.5px; }
+  .equip-label{ font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--bone-faint); font-weight: 700; margin-bottom: 12px; display: block; }
   .equip-row{ display: flex; flex-wrap: wrap; gap: 9px; }
   .badge{
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    padding: 8px 13px;
-    border-radius: 999px;
-    background: rgba(244,240,231,0.05);
-    border: 1px solid var(--panel-brd);
-    font-size: 13px;
-    color: var(--bone);
+    display: inline-flex; align-items: center; gap: 7px; padding: 8px 13px; border-radius: 999px;
+    background: rgba(244,240,231,0.05); border: 1px solid var(--panel-brd); font-size: 13px;
   }
 
-  /* ---------- SECTION 4 — FINAL BOSS ---------- */
-  #boss{ text-align: center; }
-  .boss-tag{
-    font-size: 12px;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--danger);
-    font-weight: 700;
-    margin-bottom: 10px;
-    display: block;
-  }
-  .boss-name{
-    font-size: clamp(22px, 4.5vw, 30px);
-    color: var(--bone-dim);
-    margin-bottom: 34px;
-    font-family: var(--sans);
-    font-weight: 700;
-    letter-spacing: 0.02em;
-  }
-  .hp-card{ padding: 26px 26px 30px; text-align: left; }
-  .hp-head{
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 10px;
-  }
-  .hp-head .label{
-    font-size: 11px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--bone-faint);
-    font-weight: 700;
-  }
-  .hp-head .pct{
-    font-family: var(--serif);
-    font-size: 20px;
-    color: var(--bone);
-  }
-  .hp-track{
-    height: 20px;
-    border-radius: 7px;
-    background: rgba(244,240,231,0.06);
-    overflow: hidden;
-    border: 1px solid var(--panel-brd);
-  }
-  .hp-fill{
-    height: 100%;
-    width: 100%;
-    background: linear-gradient(90deg, #C97C6B, #D99B6E);
-    transition: width 1.8s cubic-bezier(.3,.8,.3,1);
-  }
-  .weak-label{
-    margin-top: 26px;
-    font-size: 11px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--bone-faint);
-    font-weight: 700;
-    margin-bottom: 12px;
-  }
-  .weak-list{
-    list-style: none;
-    margin: 0; padding: 0;
-    display: grid;
-    gap: 9px;
-  }
-  .weak-list li{
-    font-size: 14.5px;
-    color: var(--bone);
-    padding-left: 20px;
-    position: relative;
-  }
-  .weak-list li::before{
-    content: "";
-    position: absolute;
-    left: 0; top: 7px;
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: var(--gold);
-  }
-  .boss-action{ margin-top: 30px; text-align: center; }
-  .boss-result{
-    margin-top: 22px;
-    text-align: center;
-    min-height: 1px;
-  }
-  .boss-result .r1{
-    font-family: var(--serif);
-    font-size: 19px;
-    color: var(--danger);
-    opacity: 0;
-  }
-  .boss-result .r2{
-    margin-top: 8px;
-    color: var(--bone-dim);
-    font-size: 15px;
-    opacity: 0;
-  }
-  .boss-result.show .r1, .boss-result.show .r2{
-    animation: fadeUp 0.6s ease forwards;
-  }
+  /* ---------- BOSS ---------- */
+  #boss-head{ text-align: center; margin-top: 56px; }
+  .boss-tag{ font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--danger); font-weight: 700; margin-bottom: 10px; display: block; }
+  .boss-name{ font-size: clamp(20px, 4.2vw, 27px); color: var(--bone-dim); margin-bottom: 28px; font-family: var(--sans); font-weight: 700; letter-spacing: 0.02em; }
+  .hp-card{ padding: 24px 24px 28px; text-align: left; }
+  .hp-head{ display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+  .hp-head .label{ font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--bone-faint); font-weight: 700; }
+  .hp-head .pct{ font-family: var(--serif); font-size: 19px; }
+  .hp-track{ height: 20px; border-radius: 7px; background: rgba(244,240,231,0.06); overflow: hidden; border: 1px solid var(--panel-brd); }
+  .hp-fill{ height: 100%; width: 100%; background: linear-gradient(90deg, #C97C6B, #D99B6E); transition: width 1.8s cubic-bezier(.3,.8,.3,1); }
+  .weak-label{ margin-top: 24px; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--bone-faint); font-weight: 700; margin-bottom: 12px; }
+  .weak-list{ list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; }
+  .weak-list li{ font-size: 14.5px; padding-left: 20px; position: relative; }
+  .weak-list li::before{ content:""; position:absolute; left:0; top:7px; width:6px; height:6px; border-radius:50%; background: var(--gold); }
+  .boss-action{ margin-top: 28px; text-align: center; }
+  .boss-result{ margin-top: 20px; text-align: center; min-height: 1px; }
+  .boss-result .r1{ font-family: var(--serif); font-size: 18px; color: var(--danger); opacity: 0; }
+  .boss-result .r2{ margin-top: 8px; color: var(--bone-dim); font-size: 14.5px; opacity: 0; }
+  .boss-result.show .r1, .boss-result.show .r2{ animation: fadeUp 0.6s ease forwards; }
   .boss-result.show .r2{ animation-delay: 0.25s; }
-  .round-track{
-    margin-top: 26px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-    font-size: 12.5px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--bone-faint);
-    font-weight: 700;
-    opacity: 0;
-    transition: opacity 0.6s ease 0.5s;
-  }
-  .round-track.show{ opacity: 1; }
-  .round-track span.active{ color: var(--gold); }
 
-  @media (max-width: 480px){
-    .status-card{ grid-template-columns: 1fr; gap: 18px; }
-    .pass-grid{ grid-template-columns: 1fr; }
-  }
-
-  /* ---------- SECTION 5 — ZOHAIB WARNING ---------- */
+  /* ---------- WARNING / CHECK-IN CARD ---------- */
   .warning{
+    margin-top: 48px;
     border: 1px solid rgba(201,169,97,0.3);
     background: linear-gradient(160deg, rgba(201,169,97,0.07), rgba(244,240,231,0.02));
-    padding: 30px 28px;
+    padding: 28px 26px;
   }
-  .warning-head{
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 11.5px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    font-weight: 700;
-    color: var(--gold);
-    margin-bottom: 18px;
-  }
-  .warning p{
-    font-size: 16px;
-    color: var(--bone);
-    margin-bottom: 14px;
-  }
+  .warning-head{ display:flex; align-items:center; gap:10px; font-size:11.5px; letter-spacing:0.12em; text-transform:uppercase; font-weight:700; color: var(--gold); margin-bottom:16px; }
+  .warning p{ font-size: 15.5px; margin-bottom: 13px; }
   .warning p:last-of-type{ margin-bottom: 0; }
-  .warning .quote{
-    font-family: var(--serif);
-    font-style: italic;
-    font-size: 19px;
-    color: var(--bone-dim);
-    margin: 18px 0;
-    padding-left: 18px;
-    border-left: 2px solid var(--panel-brd);
-  }
-  .warning-action{ margin-top: 26px; }
-  .warning-confirm{
-    margin-top: 16px;
-    opacity: 0;
-    max-height: 0;
-    overflow: hidden;
-    transition: opacity 0.5s ease, max-height 0.5s ease;
-  }
+  .warning .quote{ font-family: var(--serif); font-style: italic; font-size: 17.5px; color: var(--bone-dim); margin: 16px 0; padding-left: 16px; border-left: 2px solid var(--panel-brd); }
+  .warning-action{ margin-top: 24px; }
+  .warning-confirm{ margin-top: 14px; opacity: 0; max-height: 0; overflow: hidden; transition: opacity 0.5s ease, max-height 0.5s ease; }
   .warning-confirm.show{ opacity: 1; max-height: 200px; }
-  .warning-confirm .line1{
-    font-weight: 700;
-    color: var(--ok);
-    font-size: 15px;
-  }
-  .warning-confirm .line2{
-    margin-top: 6px;
-    color: var(--bone-dim);
-    font-size: 15px;
-  }
+  .warning-confirm .line1{ font-weight: 700; color: var(--ok); font-size: 14.5px; }
+  .warning-confirm .line2{ margin-top: 6px; color: var(--bone-dim); font-size: 14.5px; }
 
-  /* ---------- SECTION 6 — FIVE CARDS ---------- */
-  .card-grid{
-    margin-top: 28px;
-    display: grid;
-    gap: 14px;
-  }
-  .flip-card{
-    padding: 22px 24px;
-    cursor: pointer;
-    transition: border-color 0.3s ease, background 0.3s ease;
-    position: relative;
-  }
+  /* ---------- FIVE CARDS ---------- */
+  #cards-wrap{ margin-top: 48px; }
+  .card-grid{ margin-top: 22px; display: grid; gap: 12px; }
+  .flip-card{ padding: 20px 22px; cursor: pointer; transition: border-color 0.3s ease; position: relative; width: 100%; text-align: left; }
   .flip-card:hover{ border-color: rgba(201,169,97,0.35); }
-  .flip-card .fc-top{
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .flip-card .fc-title{
-    font-family: var(--serif);
-    font-size: 18px;
-    color: var(--bone);
-  }
+  .flip-card .fc-top{ display: flex; justify-content: space-between; align-items: center; }
+  .flip-card .fc-title{ font-family: var(--serif); font-size: 17px; }
   .flip-card .fc-icon{
-    width: 26px; height: 26px;
-    border-radius: 50%;
-    border: 1px solid var(--panel-brd);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    color: var(--gold);
-    flex-shrink: 0;
-    transition: transform 0.35s ease;
+    width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--panel-brd);
+    display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--gold);
+    flex-shrink: 0; transition: transform 0.35s ease;
   }
   .flip-card[aria-expanded="true"] .fc-icon{ transform: rotate(45deg); }
-  .fc-body{
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.4s ease, opacity 0.4s ease, margin-top 0.4s ease;
-    opacity: 0;
-  }
-  .flip-card[aria-expanded="true"] .fc-body{
-    max-height: 160px;
-    opacity: 1;
-    margin-top: 14px;
-  }
-  .fc-body p{
-    color: var(--bone-dim);
-    font-size: 15px;
-    line-height: 1.6;
-  }
+  .fc-body{ max-height: 0; overflow: hidden; transition: max-height 0.4s ease, opacity 0.4s ease, margin-top 0.4s ease; opacity: 0; }
+  .flip-card[aria-expanded="true"] .fc-body{ max-height: 160px; opacity: 1; margin-top: 12px; }
+  .fc-body p{ color: var(--bone-dim); font-size: 14.5px; line-height: 1.6; }
 
-  /* ---------- SECTION 7 — SERIOUS MOMENT ---------- */
-  #serious{
-    text-align: center;
-    padding-top: 110px;
-    padding-bottom: 110px;
-  }
-  #serious .headline{ margin-bottom: 26px; }
-  #serious p{
-    font-family: var(--serif);
-    font-size: clamp(18px, 2.6vw, 22px);
-    color: var(--bone);
-    line-height: 1.65;
-    margin-bottom: 18px;
-  }
-  #serious p.dim{ color: var(--bone-dim); }
-  #serious .final-line{
-    margin-top: 30px;
-    font-size: clamp(20px, 3vw, 24px);
-    color: var(--gold);
-  }
+  /* ---------- SERIOUS MOMENT ---------- */
+  .serious{ text-align: center; padding-top: 64px; padding-bottom: 20px; }
+  .serious .headline{ margin-bottom: 22px; }
+  .serious p{ font-family: var(--serif); font-size: clamp(17px, 2.4vw, 20px); color: var(--bone); line-height: 1.65; margin-bottom: 16px; }
+  .serious p.dim{ color: var(--bone-dim); }
+  .serious .final-line{ margin-top: 26px; font-size: clamp(19px, 2.8vw, 22px); color: var(--gold); }
 
-  /* ---------- SECTION 8 — EMERGENCY KIT ---------- */
-  .kit-grid{
-    margin-top: 28px;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-    gap: 12px;
-  }
-  .kit-btn{
-    padding: 20px 14px;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    transition: border-color 0.3s ease, transform 0.2s ease;
-  }
+  /* ---------- KIT ---------- */
+  #kit-wrap{ margin-top: 48px; }
+  .kit-grid{ margin-top: 22px; display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 11px; }
+  .kit-btn{ padding: 18px 12px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 7px; transition: border-color 0.3s ease, transform 0.2s ease; width: 100%; }
   .kit-btn:hover{ border-color: rgba(201,169,97,0.4); transform: translateY(-2px); }
-  .kit-btn .ic{ font-size: 22px; }
-  .kit-btn .lb{
-    font-size: 12px;
-    letter-spacing: 0.04em;
-    font-weight: 700;
-    color: var(--bone);
-  }
-  .kit-output{
-    margin-top: 20px;
-    min-height: 28px;
-    text-align: center;
-    color: var(--gold);
-    font-size: 15px;
-    font-family: var(--serif);
-    font-style: italic;
-    white-space: pre-line;
-    opacity: 0;
-    transition: opacity 0.4s ease;
-  }
+  .kit-btn .ic{ font-size: 20px; }
+  .kit-btn .lb{ font-size: 11.5px; letter-spacing: 0.03em; font-weight: 700; }
+  .kit-output{ margin-top: 18px; min-height: 26px; text-align: center; color: var(--gold); font-size: 14.5px; font-family: var(--serif); font-style: italic; white-space: pre-line; opacity: 0; transition: opacity 0.4s ease; }
   .kit-output.show{ opacity: 1; }
 
-  /* ---------- SECTION 9 — EXAM MODE CHECKLIST ---------- */
-  .checklist{
-    margin-top: 28px;
-    padding: 28px;
-  }
-  .checklist ul{
-    list-style: none;
-    margin: 0; padding: 0;
-    display: grid;
-    gap: 14px;
-  }
+  /* ---------- CHECKLIST ---------- */
+  #checklist-wrap{ margin-top: 48px; }
+  .checklist{ margin-top: 22px; padding: 26px; }
+  .checklist ul{ list-style: none; margin: 0; padding: 0; display: grid; gap: 13px; }
   .checklist li{
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 15.5px;
-    color: var(--bone-dim);
-    opacity: 0;
-    transform: translateX(-8px);
-    transition: opacity 0.5s ease, transform 0.5s ease, color 0.5s ease;
+    display: flex; align-items: center; gap: 12px; font-size: 15px; color: var(--bone-dim);
+    opacity: 0; transform: translateX(-8px); transition: opacity 0.5s ease, transform 0.5s ease, color 0.5s ease;
   }
-  .checklist li.show{
-    opacity: 1;
-    transform: translateX(0);
-    color: var(--bone);
-  }
+  .checklist li.show{ opacity: 1; transform: translateX(0); color: var(--bone); }
   .checklist li .box{
-    width: 18px; height: 18px;
-    border-radius: 5px;
-    border: 1.5px solid var(--panel-brd);
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: border-color 0.4s ease, background 0.4s ease;
+    width: 18px; height: 18px; border-radius: 5px; border: 1.5px solid var(--panel-brd); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; transition: border-color 0.4s ease, background 0.4s ease;
   }
-  .checklist li.show .box{
-    border-color: var(--gold);
-    background: var(--gold-soft);
-  }
-  .checklist li.show .box::after{
-    content: "✓";
-    font-size: 11px;
-    color: var(--gold);
-    font-weight: 700;
-  }
-  .mission-lines{
-    margin-top: 32px;
-    padding-top: 26px;
-    border-top: 1px solid var(--panel-brd);
-    text-align: center;
-  }
-  .mission-lines .cap{
-    font-size: 11px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--bone-faint);
-    font-weight: 700;
-    margin-bottom: 14px;
-  }
-  .mission-lines .words{
-    font-family: var(--serif);
-    font-size: clamp(22px, 5vw, 32px);
-    color: var(--gold);
-    letter-spacing: 0.03em;
-  }
+  .checklist li.show .box{ border-color: var(--gold); background: var(--gold-soft); }
+  .checklist li.show .box::after{ content: "✓"; font-size: 11px; color: var(--gold); font-weight: 700; }
+  .mission-lines{ margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--panel-brd); text-align: center; }
+  .mission-lines .cap{ font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--bone-faint); font-weight: 700; margin-bottom: 12px; }
+  .mission-lines .words{ font-family: var(--serif); font-size: clamp(20px, 4.6vw, 28px); color: var(--gold); letter-spacing: 0.03em; }
 
-  /* ---------- SECTION 10 — FINAL ---------- */
-  #finale{
-    text-align: center;
-    padding-top: 110px;
-    padding-bottom: 140px;
-  }
-  #finale .big{
-    font-size: clamp(44px, 12vw, 84px);
-    margin-bottom: 20px;
-  }
-  #finale .tease{
-    font-size: 17px;
-    color: var(--bone-dim);
-    margin-bottom: 50px;
-  }
-  .load-label{
-    font-size: 12px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--bone-faint);
-    font-weight: 700;
-    margin-bottom: 10px;
-  }
-  .finale-track{
-    max-width: 320px;
-    margin: 0 auto;
-    height: 8px;
-    border-radius: 999px;
-    background: rgba(244,240,231,0.08);
-    overflow: hidden;
-  }
-  .finale-fill{
-    height: 100%;
-    width: 0%;
-    border-radius: 999px;
-    background: linear-gradient(90deg, var(--gold), #FBF8F0);
-    transition: width 1.8s cubic-bezier(.22,.9,.3,1);
-  }
-  .finale-pct{
-    margin-top: 10px;
-    font-family: var(--serif);
-    color: var(--gold);
-    font-size: 16px;
-  }
-  .goodluck{
-    margin-top: 56px;
-    font-family: var(--serif);
-    font-size: clamp(26px, 6vw, 38px);
-    color: var(--bone);
-  }
+  /* ---------- DAY FINALE ---------- */
+  .day-finale{ text-align: center; padding-top: 70px; padding-bottom: 40px; }
+  .day-finale .big{ font-size: clamp(36px, 10vw, 62px); margin-bottom: 16px; }
+  .day-finale .tease{ font-size: 16px; color: var(--bone-dim); margin-bottom: 36px; }
+  .goodluck{ margin-top: 10px; font-family: var(--serif); font-size: clamp(24px, 5.6vw, 34px); }
   .goodluck .heart{ color: var(--danger); }
-  #finale .after{
-    margin-top: 16px;
-    color: var(--bone-dim);
-    font-size: 15.5px;
+  .day-finale .after{ margin-top: 14px; color: var(--bone-dim); font-size: 15px; }
+  .sig{ margin-top: 48px; font-family: var(--serif); font-style: italic; font-size: 15.5px; color: var(--bone-faint); }
+
+  /* ---------- LOCKED DAY 3 ---------- */
+  .locked-card{
+    margin-top: 26px; padding: 48px 28px; text-align: center;
   }
-  .sig{
-    margin-top: 60px;
-    font-family: var(--serif);
-    font-style: italic;
-    font-size: 16px;
-    color: var(--bone-faint);
-  }
+  .locked-card .lock-ic{ font-size: 30px; margin-bottom: 18px; opacity: 0.7; }
+  .locked-card h3{ font-size: 21px; margin-bottom: 10px; }
+  .locked-card p{ color: var(--bone-dim); font-size: 15px; max-width: 40ch; margin: 0 auto; }
+  .locked-card .unlock-date{ margin-top: 18px; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); font-weight: 700; }
 
   footer{
-    text-align: center;
-    padding: 50px var(--edge) 60px;
-    color: var(--bone-faint);
-    font-size: 12.5px;
-    max-width: 520px;
-    margin: 0 auto;
-    line-height: 1.6;
+    text-align: center; padding: 50px var(--edge) 60px; color: var(--bone-faint);
+    font-size: 12.5px; max-width: 520px; margin: 0 auto; line-height: 1.6;
   }
 
-  /* secret easter egg */
+  /* ---------- SECRET PEONY ---------- */
   .secret-trigger{
-    position: fixed;
-    bottom: 18px;
-    right: 18px;
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    border: 1px solid var(--panel-brd);
-    background: rgba(10,13,18,0.6);
-    backdrop-filter: blur(8px);
-    color: var(--bone-faint);
-    font-size: 12px;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 40;
-    transition: border-color 0.3s ease, color 0.3s ease, transform 0.3s ease;
+    position: fixed; bottom: 18px; right: 18px; width: 42px; height: 42px; border-radius: 50%;
+    border: 1px solid var(--panel-brd); background: rgba(10,13,18,0.6);
+    backdrop-filter: blur(8px); font-size: 17px;
+    display: flex; align-items: center; justify-content: center; z-index: 40;
+    transition: border-color 0.3s ease, transform 0.3s ease;
   }
-  .secret-trigger:hover{ border-color: var(--gold); color: var(--gold); transform: scale(1.06); }
+  .secret-trigger:hover{ border-color: var(--rose); transform: scale(1.06); }
 
   .secret-overlay{
-    position: fixed;
-    inset: 0;
-    background: rgba(5,7,10,0.86);
-    backdrop-filter: blur(6px);
-    z-index: 60;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.35s ease;
+    position: fixed; inset: 0; background: rgba(5,7,10,0.86); backdrop-filter: blur(6px); z-index: 60;
+    display: flex; align-items: center; justify-content: center; padding: 24px;
+    opacity: 0; pointer-events: none; transition: opacity 0.35s ease;
   }
   .secret-overlay.show{ opacity: 1; pointer-events: auto; }
-  .secret-card{
-    max-width: 440px;
-    padding: 34px 30px;
-    text-align: center;
-    transform: translateY(10px);
-    transition: transform 0.35s ease;
-  }
+  .secret-card{ max-width: 440px; padding: 36px 30px; text-align: center; transform: translateY(10px); transition: transform 0.35s ease; }
   .secret-overlay.show .secret-card{ transform: translateY(0); }
-  .secret-card .tag{
-    font-size: 11px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--gold);
-    font-weight: 700;
-    margin-bottom: 16px;
+  .secret-card .tag{ font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--rose); font-weight: 700; margin-bottom: 18px; }
+  .secret-card p{ font-size: 15.5px; margin-bottom: 14px; line-height: 1.6; }
+  .secret-close{ margin-top: 10px; }
+
+  .peony-wrap{ display: flex; justify-content: center; margin-bottom: 22px; }
+  .peony-petal{ transform-origin: 50px 50px; animation: petalBloom 1.1s ease forwards; opacity: 0; }
+  @keyframes petalBloom{ from{ opacity: 0; transform: scale(0.3); } to{ opacity: 1; transform: scale(1); } }
+
+  /* ---------- SECOND PEONY — password-protected victory gift ---------- */
+  .vault-trigger{
+    position: fixed; bottom: 18px; left: 18px; width: 42px; height: 42px; border-radius: 50%;
+    border: 1px solid var(--panel-brd); background: rgba(10,13,18,0.6);
+    backdrop-filter: blur(8px); font-size: 17px;
+    display: flex; align-items: center; justify-content: center; z-index: 40;
+    transition: border-color 0.3s ease, transform 0.3s ease;
   }
-  .secret-card p{
-    font-size: 16px;
-    color: var(--bone);
-    margin-bottom: 14px;
-    line-height: 1.6;
+  .vault-trigger::after{
+    content: ""; position: absolute; top: -2px; right: -2px; width: 9px; height: 9px;
+    border-radius: 50%; background: var(--gold); border: 1.5px solid var(--ink);
   }
-  .secret-close{
-    margin-top: 10px;
+  .vault-trigger:hover{ border-color: var(--gold); transform: scale(1.06); }
+
+  .vault-card{ max-width: 400px; padding: 34px 30px; text-align: center; transform: translateY(10px); transition: transform 0.35s ease; }
+  .secret-overlay.show .vault-card{ transform: translateY(0); }
+  .vault-card .tag{ font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); font-weight: 700; margin-bottom: 10px; }
+  .vault-card h3{ font-size: 19px; margin-bottom: 8px; }
+  .vault-card p.hint{ color: var(--bone-dim); font-size: 14px; margin-bottom: 22px; }
+  .vault-form{ display: flex; flex-direction: column; gap: 12px; }
+  .vault-input{
+    width: 100%; padding: 13px 16px; border-radius: 10px;
+    background: rgba(244,240,231,0.05); border: 1px solid var(--panel-brd);
+    color: var(--bone); font-family: var(--sans); font-size: 15px; text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .vault-input::placeholder{ color: var(--bone-faint); }
+  .vault-input:focus-visible{ outline: 2px solid var(--gold); outline-offset: 2px; }
+  .vault-input.shake{ animation: shakeInput 0.4s ease; border-color: var(--danger); }
+  @keyframes shakeInput{
+    0%,100%{ transform: translateX(0); }
+    25%{ transform: translateX(-6px); }
+    75%{ transform: translateX(6px); }
+  }
+  .vault-error{
+    font-size: 13px; color: var(--danger); min-height: 18px; opacity: 0; transition: opacity 0.3s ease;
+  }
+  .vault-error.show{ opacity: 1; }
+  .vault-close{ margin-top: 6px; }
+
+  /* ---------- CELEBRATION (unlocked by the vault) ---------- */
+  #celebration{ display: none; }
+  #celebration.unlocked{ display: block; }
+  .celeb-section{ text-align: center; padding-top: 70px; }
+  .celeb-eyebrow{
+    font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 700;
+    color: var(--gold); margin-bottom: 14px; display: block;
+  }
+  .celeb-section .headline{ margin-bottom: 10px; }
+  .celeb-section .sub{ margin: 0 auto 36px; }
+  .celeb-text{
+    max-width: 58ch; margin: 0 auto; text-align: left;
+  }
+  .celeb-text p{
+    font-size: 16px; color: var(--bone); line-height: 1.75; margin-bottom: 18px;
+  }
+  .celeb-text p.dim{ color: var(--bone-dim); }
+
+  .stats-grid{
+    margin: 40px auto 0; max-width: 560px;
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px;
+  }
+  .stat-card{ padding: 20px; text-align: left; }
+  .stat-card .k{ font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--bone-faint); font-weight: 700; display: block; margin-bottom: 8px; }
+  .stat-card .v{ font-family: var(--serif); font-size: 16.5px; color: var(--bone); }
+  .stat-card .v.gold{ color: var(--gold); }
+
+  /* ---------- CERTIFICATE ---------- */
+  #certificateWrap{ margin-top: 54px; padding: 0 var(--edge); }
+  #certificateCard{
+    max-width: 880px; margin: 0 auto;
+    aspect-ratio: 1.42 / 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 36px 56px;
+    background: linear-gradient(160deg, rgba(201,169,97,0.08), rgba(244,240,231,0.02));
+    border: 1.5px solid var(--panel-brd);
+    position: relative;
+  }
+  #certificateCard::before{
+    content: ""; position: absolute; inset: 10px;
+    border: 1px solid rgba(201,169,97,0.35); border-radius: 12px; pointer-events: none;
+  }
+  .cert-seal{
+    width: 44px; height: 44px; margin: 0 auto 12px; border-radius: 50%;
+    border: 1.5px solid var(--gold); display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .cert-eyebrow{
+    font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold);
+    font-weight: 700; text-align: center; margin-bottom: 10px;
+  }
+  .cert-lead{ text-align: center; color: var(--bone-dim); font-size: 13px; margin-bottom: 4px; }
+  .cert-name{
+    text-align: center; font-family: var(--serif); font-size: clamp(24px, 4.4vw, 32px);
+    color: var(--bone); margin-bottom: 10px;
+  }
+  .cert-body{ text-align: center; color: var(--bone); font-size: 14px; max-width: 52ch; margin: 0 auto 16px; line-height: 1.5; }
+  .cert-awarded-label{
+    font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--bone-faint);
+    font-weight: 700; text-align: center; margin-bottom: 10px;
+  }
+  .cert-list{ list-style: none; margin: 0 auto 18px; padding: 0; max-width: 56ch; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 22px; }
+  .cert-list li{ font-size: 12.5px; color: var(--bone); padding-left: 18px; position: relative; text-align: left; line-height: 1.4; }
+  .cert-list li::before{ content:""; position:absolute; left:0; top:6px; width:5px; height:5px; border-radius:50%; background: var(--gold); }
+  .cert-footer{
+    display: flex; justify-content: space-between; align-items: flex-end;
+    padding-top: 14px; border-top: 1px dashed var(--panel-brd);
+    font-size: 11.5px; color: var(--bone-dim);
+  }
+  .cert-footer .sig{ margin: 0; font-size: 14px; color: var(--bone); }
+  .cert-footer .role{ font-size: 10.5px; color: var(--bone-faint); margin-top: 2px; }
+  .cert-fine{ text-align: center; margin-top: 10px; font-size: 10.5px; color: var(--bone-faint); font-style: italic; }
+
+  .cert-download{ text-align: center; margin-top: 26px; }
+
+  @media (max-width: 680px){
+    #certificateCard{ aspect-ratio: auto; padding: 32px 26px; }
+    .cert-list{ grid-template-columns: 1fr; }
   }
 
-  .sr-only{
-    position: absolute;
-    width: 1px; height: 1px;
-    padding: 0; margin: -1px;
-    overflow: hidden;
-    clip: rect(0,0,0,0);
-    white-space: nowrap;
-    border: 0;
+  @media print{
+    body.printing-cert *{ visibility: hidden; }
+    body.printing-cert #certificateCard,
+    body.printing-cert #certificateCard *{ visibility: visible; }
+    body.printing-cert #certificateCard{
+      position: fixed; inset: 0; width: 100%; height: 100%; margin: 0;
+      padding: 70px 60px; display: flex; flex-direction: column; justify-content: center;
+      background: #FBF8F0 !important; border: 6px double #C9A961 !important;
+      backdrop-filter: none !important; box-shadow: none !important;
+    }
+    body.printing-cert #certificateCard::before{ border-color: rgba(201,169,97,0.5) !important; inset: 16px; }
+    body.printing-cert #certificateCard *{ color: #1E1B16 !important; }
+    body.printing-cert .cert-eyebrow,
+    body.printing-cert .cert-seal{ color: #9C7B3A !important; border-color: #9C7B3A !important; }
+    body.printing-cert .cert-list li::before{ background: #9C7B3A !important; }
+    @page{ size: A4 landscape; margin: 0; }
   }
+
+  @media (max-width: 480px){
+    .status-card{ grid-template-columns: 1fr; gap: 16px; }
+    .pass-grid{ grid-template-columns: 1fr; }
+    .recap-stats{ grid-template-columns: 1fr; }
+    .day-nav{ gap: 6px; padding: 12px var(--edge); }
+    .day-tab{ padding: 8px 12px; font-size: 11.5px; }
+    .step{ width: 74px; }
+    .step-line{ width: 24px; }
+  }
+
+  /* ---------- VAULT CELEBRATION SHOW — fireworks + falling peonies ---------- */
+  #fireworksCanvas{
+    position: fixed; inset: 0; z-index: 45; pointer-events: none;
+  }
+  .falling-petal{
+    position: fixed; z-index: 46; pointer-events: none; font-size: 20px;
+    will-change: transform, opacity; top: 0; left: 0;
+  }
+  .sr-only{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 </style>
 </head>
 <body>
 
 <canvas id="particleField" aria-hidden="true"></canvas>
+<canvas id="fireworksCanvas" aria-hidden="true"></canvas>
 
 <!-- ============================================================
-     SECTION 1 — OPENING
+     OPENING — day-aware headline, filled in by JS on load
 ============================================================ -->
 <section id="opening">
   <p class="open-kicker">An important message for</p>
+  <p class="open-day-badge" id="openDayBadge">Day 1 of 3</p>
   <h1 class="open-name">Raphaela</h1>
   <p class="open-exam">Steuerberaterin Exam · 2026</p>
-  <p class="open-line">Final mission detected.</p>
+  <p class="open-line" id="openLine">Final mission detected.</p>
   <div class="open-cta">
-    <button class="btn btn--primary" id="enterBtn">Enter exam mode →</button>
+    <button class="btn btn--primary" id="enterBtn">Continue the mission →</button>
   </div>
   <p class="scroll-cue">Scroll · or press enter</p>
 </section>
 
-<!-- Everything past this point is hidden until "Enter exam mode" is pressed -->
 <main id="mainContent" hidden>
 
   <!-- ============================================================
-       SECTION 2 — MISSION CONTROL
+       CAMPAIGN STEPPER — overall 3-day status, computed from date
   ============================================================ -->
-  <section class="section" id="mission">
-    <span class="eyebrow reveal">Mission control</span>
-    <h2 class="headline reveal">Mission: Steuerberaterin</h2>
-    <p class="sub reveal">Two to three days. One final challenge.</p>
+  <section class="section" id="campaign">
+    <span class="eyebrow reveal">The campaign</span>
+    <h2 class="headline reveal">Three days. One mission.</h2>
+    <p class="sub reveal" style="margin:0 auto;">Each day has its own briefing. Pick up wherever today finds you.</p>
 
-    <div class="status-card glass reveal">
-      <div class="status-item">
-        <span class="k">Status</span>
-        <span class="v">Final exam</span>
-      </div>
-      <div class="status-item">
-        <span class="k">Objective</span>
-        <span class="v">Pass. Obviously.</span>
-      </div>
-      <div class="status-item">
-        <span class="k">Difficulty</span>
-        <span class="v gold">Final boss</span>
-      </div>
-    </div>
-
-    <div class="progress-wrap glass reveal" style="padding:24px 26px;">
-      <div class="progress-head">
-        <span class="label">Preparation complete</span>
-        <span class="pct" id="prepPct">0%</span>
-      </div>
-      <div class="progress-track">
-        <div class="progress-fill" id="prepFill"></div>
-      </div>
-      <p class="progress-note">Years of studying, months of preparation, and countless hours of work — all adding up to one thing: you are ready.</p>
+    <div class="stepper reveal" id="stepper">
+      <!-- populated by JS -->
     </div>
   </section>
 
   <!-- ============================================================
-       SECTION 3 — DIGITAL EXAM PASS
+       DAY NAVIGATION
   ============================================================ -->
-  <section class="section" id="pass-section">
-    <span class="eyebrow reveal">Credentials</span>
-    <h2 class="headline reveal">Your exam pass</h2>
+  <nav class="day-nav" id="dayNav" aria-label="Exam days">
+    <button class="day-tab" data-day="1" role="tab" aria-selected="false">Day 01</button>
+    <button class="day-tab" data-day="2" role="tab" aria-selected="false">Day 02</button>
+    <button class="day-tab" data-day="3" role="tab" aria-selected="false">Day 03</button>
+  </nav>
 
-    <div class="pass glass reveal">
-      <div class="pass-top">
-        <span class="pass-title">Exam pass</span>
-        <span class="pass-status">Ready</span>
-      </div>
-      <div class="pass-body">
-        <p class="pass-name">Raphaela</p>
-        <p class="pass-role">Future Steuerberaterin</p>
+  <!-- ============================================================
+       DAY 1 PANEL — recap / debrief
+  ============================================================ -->
+  <div class="day-panel" id="panel-1" role="tabpanel">
+    <section class="section">
+      <span class="eyebrow reveal">Day 01</span>
+      <h2 class="headline reveal">Round one is logged.</h2>
 
-        <div class="pass-grid">
+      <div class="recap-card glass reveal">
+        <span class="recap-status">✓ Survived</span>
+        <h3>Your best subject decided to get creative.</h3>
+        <p>You walked in expecting your strongest ground and got handed tasks you'd never seen before. That's allowed to be frustrating — it doesn't erase the months that got you into that seat.</p>
+        <p class="callback">Fun fact, by the official law of the universe: the subject you worried about least usually ends up overperforming. We're about to find out if the universe holds up its end of the deal.</p>
+        <p>One hard day, logged and closed. Three days, one mission — this is just the first checkpoint.</p>
+
+        <div class="recap-stats">
           <div>
-            <span class="k">Mission</span>
-            <span class="v">Pass the exam</span>
+            <span class="k">Exam</span>
+            <span class="v">Day 1</span>
           </div>
           <div>
-            <span class="k">Duration</span>
-            <span class="v">2–3 days</span>
+            <span class="k">Result</span>
+            <span class="v">Logged. Moving on.</span>
+          </div>
+          <div>
+            <span class="k">Energy spent</span>
+            <span class="v gold">Maximum</span>
           </div>
         </div>
-
-        <span class="equip-label">Authorized equipment</span>
-        <div class="equip-row">
-          <span class="badge">🧠 Brain</span>
-          <span class="badge">☕ Coffee</span>
-          <span class="badge">📚 Knowledge</span>
-          <span class="badge">💪 Determination</span>
-          <span class="badge">😅 Controlled panic</span>
-        </div>
       </div>
-    </div>
-  </section>
+    </section>
+  </div>
 
   <!-- ============================================================
-       SECTION 4 — FINAL BOSS
+       DAY 2 PANEL — today's full mission
   ============================================================ -->
-  <section class="section" id="boss">
-    <span class="boss-tag reveal">Final boss detected</span>
-    <h2 class="boss-name reveal">Steuerberaterprüfung</h2>
+  <div class="day-panel" id="panel-2" role="tabpanel">
 
-    <div class="hp-card glass reveal">
-      <div class="hp-head">
-        <span class="label">Boss HP</span>
-        <span class="pct" id="hpPct">100%</span>
-      </div>
-      <div class="hp-track">
-        <div class="hp-fill" id="hpFill"></div>
-      </div>
+    <section class="section">
+      <span class="eyebrow reveal">Day 02 · 09:00–15:00</span>
+      <h2 class="headline reveal">New subject. Clean slate.</h2>
+      <p class="sub reveal">Same Raphaela who's been preparing for months. Different battlefield.</p>
 
-      <p class="weak-label">Known weaknesses</p>
-      <ul class="weak-list">
-        <li>Careful reading</li>
-        <li>Staying calm</li>
-        <li>Everything you studied</li>
-        <li>Coffee</li>
-        <li>Refusing to give up</li>
-      </ul>
-
-      <div class="boss-action">
-        <button class="btn btn--primary" id="fightBtn" style="width:100%;justify-content:center;">Fight the boss ⚔️</button>
+      <div class="status-card glass reveal">
+        <div class="status-item"><span class="k">Status</span><span class="v">In progress</span></div>
+        <div class="status-item"><span class="k">Objective</span><span class="v">Pass. Again. Obviously.</span></div>
+        <div class="status-item"><span class="k">Difficulty</span><span class="v gold">Final boss, vol. 2</span></div>
       </div>
 
-      <div class="boss-result" id="bossResult">
-        <p class="r1">Boss damage: massive</p>
-        <p class="r2">Okay, maybe you're more prepared than you think. 😂</p>
+      <div class="progress-wrap glass reveal">
+        <div class="progress-head"><span class="label">Preparation complete</span><span class="pct" id="prepPct">0%</span></div>
+        <div class="progress-track"><div class="progress-fill" id="prepFill"></div></div>
+        <p class="progress-note">Yesterday didn't move the needle on this number. The work is still in there.</p>
       </div>
+    </section>
 
-      <div class="round-track" id="roundTrack">
-        <span id="r1">Round 1</span> → <span id="r2">Round 2</span> → <span id="r3">Final round</span>
-      </div>
-    </div>
-  </section>
+    <section class="section">
+      <span class="eyebrow reveal">Credentials</span>
+      <h2 class="headline reveal">Today's pass</h2>
 
-  <!-- ============================================================
-       SECTION 5 — THE ZOHAIB WARNING
-  ============================================================ -->
-  <section class="section" id="warning-section">
-    <div class="warning glass reveal">
-      <p class="warning-head">⚠️ Official warning</p>
-      <p>If you start thinking:</p>
-      <p class="quote">"I can't do this."</p>
-      <p>please remember that someone has spent weeks waking you up, reminding you to study, encouraging you to come to the library, and generally refusing to let you give up. 😂</p>
-      <p>So unfortunately, you are now legally obligated to make all of that effort worth it.</p>
-
-      <div class="warning-action">
-        <button class="btn btn--ghost" id="acceptBtn">I accept my responsibility</button>
-        <div class="warning-confirm" id="acceptConfirm">
-          <p class="line1">Good. That's what I wanted to hear. 🫡</p>
-          <p class="line2">Now go make that exam regret meeting you.</p>
+      <div class="pass glass reveal">
+        <div class="pass-top">
+          <span class="pass-title">Exam pass</span>
+          <span class="pass-status">Ready</span>
+        </div>
+        <div class="pass-body">
+          <p class="pass-name">Raphaela</p>
+          <p class="pass-role">Future Steuerberaterin</p>
+          <div class="pass-grid">
+            <div><span class="k">Mission</span><span class="v">Pass today's subject</span></div>
+            <div><span class="k">Duration</span><span class="v">09:00 – 15:00</span></div>
+          </div>
+          <span class="equip-label">Authorized equipment</span>
+          <div class="equip-row">
+            <span class="badge">🧠 Brain</span>
+            <span class="badge">☕ Coffee</span>
+            <span class="badge">📚 Knowledge</span>
+            <span class="badge">💪 Determination</span>
+            <span class="badge">😅 Controlled panic</span>
+          </div>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- ============================================================
-       SECTION 6 — FIVE THINGS TO REMEMBER
-  ============================================================ -->
-  <section class="section" id="cards-section">
-    <span class="eyebrow reveal">Before you go in</span>
-    <h2 class="headline reveal">Five things to remember</h2>
-    <p class="sub reveal">Tap each one.</p>
+    <section class="section" id="boss-head">
+      <span class="boss-tag reveal">Final boss detected</span>
+      <h2 class="boss-name reveal">Steuerberaterprüfung — Round 2</h2>
 
-    <div class="card-grid reveal" id="cardGrid">
-      <button class="flip-card glass" aria-expanded="false">
-        <div class="fc-top">
-          <span class="fc-title">01 — Breathe</span>
-          <span class="fc-icon" aria-hidden="true">+</span>
+      <div class="hp-card glass reveal">
+        <div class="hp-head"><span class="label">Boss HP</span><span class="pct" id="hpPct">100%</span></div>
+        <div class="hp-track"><div class="hp-fill" id="hpFill"></div></div>
+
+        <p class="weak-label">Known weaknesses</p>
+        <ul class="weak-list">
+          <li>Careful reading</li>
+          <li>Staying calm</li>
+          <li>Everything you studied</li>
+          <li>Letting yesterday go</li>
+          <li>Refusing to give up</li>
+        </ul>
+
+        <div class="boss-action">
+          <button class="btn btn--primary" id="fightBtn" style="width:100%;justify-content:center;">Fight the boss ⚔️</button>
         </div>
-        <div class="fc-body"><p>You don't need to solve the entire exam at once. Just deal with the question in front of you.</p></div>
-      </button>
-
-      <button class="flip-card glass" aria-expanded="false">
-        <div class="fc-top">
-          <span class="fc-title">02 — Trust your preparation</span>
-          <span class="fc-icon" aria-hidden="true">+</span>
+        <div class="boss-result" id="bossResult">
+          <p class="r1">Boss damage: massive</p>
+          <p class="r2">That's two rounds down. It doesn't get to say that again tomorrow.</p>
         </div>
-        <div class="fc-body"><p>You've already done the hard part: showing up and putting in the work.</p></div>
-      </button>
-
-      <button class="flip-card glass" aria-expanded="false">
-        <div class="fc-top">
-          <span class="fc-title">03 — One question at a time</span>
-          <span class="fc-icon" aria-hidden="true">+</span>
-        </div>
-        <div class="fc-body"><p>Don't let one difficult question convince you that the whole exam is going badly.</p></div>
-      </button>
-
-      <button class="flip-card glass" aria-expanded="false">
-        <div class="fc-top">
-          <span class="fc-title">04 — Don't rush</span>
-          <span class="fc-icon" aria-hidden="true">+</span>
-        </div>
-        <div class="fc-body"><p>Read carefully. Think clearly. Then answer.</p></div>
-      </button>
-
-      <button class="flip-card glass" aria-expanded="false">
-        <div class="fc-top">
-          <span class="fc-title">05 — Future Raphaela</span>
-          <span class="fc-icon" aria-hidden="true">+</span>
-        </div>
-        <div class="fc-body"><p>She's waiting on the other side of these few days. 👩‍💼</p></div>
-      </button>
-    </div>
-  </section>
-
-  <!-- ============================================================
-       SECTION 7 — A MORE SERIOUS MOMENT
-  ============================================================ -->
-  <section class="section" id="serious">
-    <h2 class="headline reveal" style="text-align:center;">But seriously...</h2>
-    <p class="reveal">You've worked incredibly hard to get here.</p>
-    <p class="reveal">So when you sit down for the exam, take a breath, trust yourself, and remember how much preparation brought you to this moment.</p>
-    <p class="reveal dim">You don't have to be perfect.</p>
-    <p class="reveal dim">You just have to give it everything you've got.</p>
-    <p class="final-line reveal">You've got this, Raphaela. ❤️</p>
-  </section>
-
-  <!-- ============================================================
-       SECTION 8 — EMERGENCY EXAM KIT
-  ============================================================ -->
-  <section class="section" id="kit-section">
-    <span class="eyebrow reveal">In case of emergency</span>
-    <h2 class="headline reveal">Emergency exam kit</h2>
-    <p class="sub reveal">Click one when you need it.</p>
-
-    <div class="kit-grid reveal" id="kitGrid">
-      <button class="kit-btn glass" data-kit="coffee">
-        <span class="ic">☕</span><span class="lb">Coffee</span>
-      </button>
-      <button class="kit-btn glass" data-kit="brain">
-        <span class="ic">🧠</span><span class="lb">Brain</span>
-      </button>
-      <button class="kit-btn glass" data-kit="confidence">
-        <span class="ic">💪</span><span class="lb">Confidence</span>
-      </button>
-      <button class="kit-btn glass" data-kit="knowledge">
-        <span class="ic">📚</span><span class="lb">Knowledge</span>
-      </button>
-      <button class="kit-btn glass" data-kit="motivation">
-        <span class="ic">❤️</span><span class="lb">Motivation</span>
-      </button>
-    </div>
-
-    <p class="kit-output" id="kitOutput" aria-live="polite"></p>
-  </section>
-
-  <!-- ============================================================
-       SECTION 9 — EXAM MODE
-  ============================================================ -->
-  <section class="section" id="exam-mode">
-    <span class="eyebrow reveal">System status</span>
-    <h2 class="headline reveal">Exam mode: activated</h2>
-
-    <div class="checklist glass reveal" id="checklist">
-      <ul>
-        <li><span class="box"></span> Phone on silent</li>
-        <li><span class="box"></span> Water ready</li>
-        <li><span class="box"></span> Everything needed packed</li>
-        <li><span class="box"></span> Brain online</li>
-        <li><span class="box"></span> Panic under control</li>
-        <li><span class="box"></span> Give it everything</li>
-      </ul>
-
-      <div class="mission-lines">
-        <p class="cap">Current mission</p>
-        <p class="words">Read. Think. Answer. Repeat.</p>
       </div>
-    </div>
-  </section>
+    </section>
+
+    <section class="section">
+      <div class="warning glass reveal">
+        <p class="warning-head">⚠️ Day 2 briefing</p>
+        <p>Yesterday was rough. Your best subject didn't play fair, and that's noted — and it's over.</p>
+        <p class="quote">Today is not yesterday.</p>
+        <p>Different subject, different battlefield, same prepared person walking in. Also, by official law-of-the-universe calculations, today is statistically obligated to go better. 😂</p>
+        <div class="warning-action">
+          <button class="btn btn--ghost" id="acceptBtn">I accept today's mission</button>
+          <div class="warning-confirm" id="acceptConfirm">
+            <p class="line1">Good. Now go in and even the score. 🫡</p>
+            <p class="line2">One subject at a time. That's the whole job today.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="cards-wrap">
+      <span class="eyebrow reveal">Before you go in</span>
+      <h2 class="headline reveal">Five things to remember</h2>
+      <p class="sub reveal">Tap each one.</p>
+
+      <div class="card-grid reveal">
+        <button class="flip-card glass" aria-expanded="false">
+          <div class="fc-top"><span class="fc-title">01 — Let yesterday go</span><span class="fc-icon" aria-hidden="true">+</span></div>
+          <div class="fc-body"><p>One hard day doesn't define the exam. Today gets a clean page.</p></div>
+        </button>
+        <button class="flip-card glass" aria-expanded="false">
+          <div class="fc-top"><span class="fc-title">02 — Breathe</span><span class="fc-icon" aria-hidden="true">+</span></div>
+          <div class="fc-body"><p>You don't need to solve the whole exam at once. Just the question in front of you.</p></div>
+        </button>
+        <button class="flip-card glass" aria-expanded="false">
+          <div class="fc-top"><span class="fc-title">03 — One question at a time</span><span class="fc-icon" aria-hidden="true">+</span></div>
+          <div class="fc-body"><p>Don't let one tough question convince you the whole thing is going badly. It rarely means that.</p></div>
+        </button>
+        <button class="flip-card glass" aria-expanded="false">
+          <div class="fc-top"><span class="fc-title">04 — Trust the prep</span><span class="fc-icon" aria-hidden="true">+</span></div>
+          <div class="fc-body"><p>The studying happened whether or not yesterday showed it. It's still in there.</p></div>
+        </button>
+        <button class="flip-card glass" aria-expanded="false">
+          <div class="fc-top"><span class="fc-title">05 — Future Raphaela</span><span class="fc-icon" aria-hidden="true">+</span></div>
+          <div class="fc-body"><p>She's one day closer now. 👩‍💼</p></div>
+        </button>
+      </div>
+    </section>
+
+    <section class="serious section">
+      <h2 class="headline reveal" style="text-align:center;">But seriously...</h2>
+      <p class="reveal">Yesterday didn't go the way you hoped, and that's allowed to sting for exactly as long as it takes to close the car door.</p>
+      <p class="reveal">Then it's done. You've already proven you can sit through a hard day and still show up for the next one — that's most of what this exam is actually testing.</p>
+      <p class="reveal dim">You don't have to be perfect today either.</p>
+      <p class="reveal dim">You just have to give it everything you've got, one more time.</p>
+      <p class="final-line reveal">You've got this, Raphaela. ❤️</p>
+    </section>
+
+    <section class="section" id="kit-wrap">
+      <span class="eyebrow reveal">In case of emergency</span>
+      <h2 class="headline reveal">Emergency exam kit</h2>
+      <p class="sub reveal">Click one when you need it.</p>
+
+      <div class="kit-grid reveal">
+        <button class="kit-btn glass" data-kit="coffee"><span class="ic">☕</span><span class="lb">Coffee</span></button>
+        <button class="kit-btn glass" data-kit="brain"><span class="ic">🧠</span><span class="lb">Brain</span></button>
+        <button class="kit-btn glass" data-kit="confidence"><span class="ic">💪</span><span class="lb">Confidence</span></button>
+        <button class="kit-btn glass" data-kit="knowledge"><span class="ic">📚</span><span class="lb">Knowledge</span></button>
+        <button class="kit-btn glass" data-kit="reset"><span class="ic">🔄</span><span class="lb">Reset</span></button>
+      </div>
+      <p class="kit-output" aria-live="polite" id="kitOutput"></p>
+    </section>
+
+    <section class="section" id="checklist-wrap">
+      <span class="eyebrow reveal">System status</span>
+      <h2 class="headline reveal">Day 2 mode: activated</h2>
+      <div class="checklist glass reveal" id="checklist">
+        <ul>
+          <li><span class="box"></span> Phone on silent</li>
+          <li><span class="box"></span> Water ready</li>
+          <li><span class="box"></span> Yesterday left in the car</li>
+          <li><span class="box"></span> Brain online</li>
+          <li><span class="box"></span> Panic under control</li>
+          <li><span class="box"></span> Give it everything</li>
+        </ul>
+        <div class="mission-lines">
+          <p class="cap">Current mission</p>
+          <p class="words">Read. Think. Answer. Repeat.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="day-finale section">
+      <h2 class="big reveal">Now go.</h2>
+      <p class="tease reveal">Round two starts whenever you walk through those doors.</p>
+      <p class="goodluck reveal">Good luck, Raphaela <span class="heart">❤️</span></p>
+      <p class="after reveal">Go make up for yesterday — one subject at a time.</p>
+      <p class="sig reveal">— Zohaib</p>
+    </section>
+  </div>
 
   <!-- ============================================================
-       SECTION 10 — THE FINAL MESSAGE
+       DAY 3 PANEL — locked until the date arrives, then unlocked
   ============================================================ -->
-  <section class="section" id="finale">
-    <h2 class="big reveal">Now go.</h2>
-    <p class="tease reveal">Give those tax laws a reason to be scared. 😂</p>
+  <div class="day-panel" id="panel-3" role="tabpanel">
 
-    <div class="reveal" id="finaleProgress">
-      <p class="load-label">Future Steuerberaterin loading...</p>
-      <div class="finale-track">
-        <div class="finale-fill" id="finaleFill"></div>
+    <!-- Locked state -->
+    <section class="section" id="day3Locked">
+      <div class="locked-card glass reveal">
+        <div class="lock-ic">🔒</div>
+        <h3>Day 03 is still locked.</h3>
+        <p>There's something waiting here for the final day. Come back once it's actually here.</p>
+        <p class="unlock-date" id="unlockDate">Unlocks October 8</p>
       </div>
-      <p class="finale-pct" id="finalePct">0%</p>
-    </div>
+    </section>
 
-    <p class="goodluck reveal">Good luck, Raphaela <span class="heart">❤️</span></p>
-    <p class="after reveal">Go show that exam what you've been preparing for.</p>
+    <!-- Unlocked state -->
+    <section class="day-panel-inner" id="day3Unlocked" hidden>
+      <section class="section">
+        <span class="eyebrow rose reveal">Day 03 · Final stretch</span>
+        <h2 class="headline reveal">Last exam. Last fight.</h2>
+        <p class="sub reveal">After today, it's just you, closed books, and the wait for results.</p>
 
-    <p class="sig reveal">— Zohaib</p>
-  </section>
+        <div class="status-card glass reveal">
+          <div class="status-item"><span class="k">Status</span><span class="v">Final round</span></div>
+          <div class="status-item"><span class="k">Objective</span><span class="v">Finish strong</span></div>
+          <div class="status-item"><span class="k">Difficulty</span><span class="v gold">Last one. Then done.</span></div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="warning glass reveal" style="margin-top:0;">
+          <p class="warning-head">⚠️ Day 3 briefing</p>
+          <p>Two days down. Whatever happened in either of them, you're still here for the third.</p>
+          <p class="quote">That's the part that actually matters.</p>
+          <p>Go finish what you started. Everything after today is out of your hands anyway — so hand over everything you've got, one last time.</p>
+        </div>
+      </section>
+
+      <section class="day-finale section">
+        <h2 class="big reveal">This is it.</h2>
+        <p class="tease reveal">Give it whatever's left in the tank.</p>
+        <p class="goodluck reveal">Good luck, Raphaela <span class="heart">❤️</span></p>
+        <p class="after reveal" style="max-width:48ch; margin-left:auto; margin-right:auto;">Whatever the scores say in a few weeks, you walked into that arena three days straight and gave it everything each time. That's already something.</p>
+        <p class="sig reveal">— Zohaib</p>
+      </section>
+    </section>
+  </div>
+
+  <!-- ============================================================
+       CELEBRATION — hidden until the vault password is entered.
+       Not tied to the day system; available whenever she has it.
+  ============================================================ -->
+  <div id="celebration">
+    <section class="celeb-section section">
+      <span class="celeb-eyebrow reveal">Vault unlocked</span>
+      <h2 class="headline reveal">Okay. Before anything else —</h2>
+      <p class="sub reveal">This part isn't about the exam results. It's about everything before them.</p>
+
+      <div class="celeb-text">
+        <p class="reveal">I watched you wake up on mornings you clearly didn't want to, and go to the library anyway. Not every time it was easy, and not every time you wanted to — you went regardless.</p>
+        <p class="reveal">There were days you doubted whether any of it would be enough. You sat down and studied anyway.</p>
+        <p class="reveal">There was a morning you didn't want to go take this exam at all. You went anyway.</p>
+        <p class="reveal">Day 1 didn't go the way you'd hoped — your best subject turned into the hardest fight of the three. You could have let that be the end of the story. Instead you were back at the arena the very next morning, and the one after that.</p>
+        <p class="reveal dim">That's not luck, and it's not just talent. It's choosing to show up when showing up was the hardest option on the table — over and over, for weeks, long before anyone was watching.</p>
+        <p class="reveal">So regardless of what the official results say later — this part was never in question.</p>
+      </div>
+
+      <div class="stats-grid reveal">
+        <div class="stat-card glass">
+          <span class="k">Exam days shown up for</span>
+          <span class="v gold">3 / 3</span>
+        </div>
+        <div class="stat-card glass">
+          <span class="k">Mornings talked herself into it</span>
+          <span class="v">All of them</span>
+        </div>
+        <div class="stat-card glass">
+          <span class="k">Times she almost didn't go</span>
+          <span class="v">Doesn't matter — she went</span>
+        </div>
+        <div class="stat-card glass">
+          <span class="k">Final verdict</span>
+          <span class="v gold">Steuerberaterin-shaped human, confirmed</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------------- CERTIFICATE ---------------- -->
+    <section id="certificateWrap">
+      <div id="certificateCard" class="glass reveal">
+        <div class="cert-seal" aria-hidden="true">🌸</div>
+        <p class="cert-eyebrow">Certificate of Recognition</p>
+        <p class="cert-lead">This certifies that</p>
+        <h3 class="cert-name">Raphaela Drechsel</h3>
+        <p class="cert-body">completed the Steuerberater examination — three days, three exams, and not one of them skipped, no matter how the mornings started.</p>
+
+        <p class="cert-awarded-label">Awarded in recognition of</p>
+        <ul class="cert-list">
+          <li>Waking up on the hard mornings anyway</li>
+          <li>Choosing the library over the easier option, more times than anyone saw</li>
+          <li>Walking back in on Day 2 after a Day 1 that didn't go as planned</li>
+          <li>Carrying real self-doubt and showing up to the exam anyway</li>
+          <li>Finishing exactly what she started — all three days, no exceptions</li>
+        </ul>
+
+        <div class="cert-footer">
+          <div>
+            <p class="sig">Zohaib</p>
+            <p class="role">Chief Encouragement Officer (self-appointed) 😂</p>
+          </div>
+          <div style="text-align:right;">
+            <p class="role">October 2026</p>
+          </div>
+        </div>
+        <p class="cert-fine">Results pending. This part never was.</p>
+      </div>
+
+      <div class="cert-download reveal">
+        <button class="btn btn--primary" id="downloadCertBtn">Download certificate (PDF) ↓</button>
+        <p class="sub" style="margin:12px auto 0; max-width:40ch;">Downloads straight to your device — widescreen, ready to print or keep.</p>
+      </div>
+    </section>
+  </div>
 
   <footer>
     Made with encouragement, questionable amounts of persistence, and absolutely no tax advice. 😂
@@ -1254,16 +1044,48 @@
 </main>
 
 <!-- ============================================================
-     SECRET SURPRISE
+     SECRET — the peony
 ============================================================ -->
-<button class="secret-trigger" id="secretTrigger" aria-label="Secret message" title="???">???</button>
+<button class="secret-trigger" id="secretTrigger" aria-label="Secret message" title="🌸">🌸</button>
 
 <div class="secret-overlay" id="secretOverlay" role="dialog" aria-modal="true" aria-labelledby="secretTag">
   <div class="secret-card glass">
+    <div class="peony-wrap">
+      <svg width="100" height="100" viewBox="0 0 100 100" aria-hidden="true" id="peonySvg">
+        <g>
+          <ellipse class="peony-petal" cx="50" cy="30" rx="16" ry="20" fill="#E6B6C0" opacity="0.9" style="animation-delay:0.05s"></ellipse>
+          <ellipse class="peony-petal" cx="68" cy="42" rx="16" ry="20" fill="#E6B6C0" opacity="0.85" transform="rotate(72 50 50)" style="animation-delay:0.15s"></ellipse>
+          <ellipse class="peony-petal" cx="60" cy="68" rx="16" ry="20" fill="#E6B6C0" opacity="0.85" transform="rotate(144 50 50)" style="animation-delay:0.25s"></ellipse>
+          <ellipse class="peony-petal" cx="40" cy="68" rx="16" ry="20" fill="#E6B6C0" opacity="0.85" transform="rotate(216 50 50)" style="animation-delay:0.35s"></ellipse>
+          <ellipse class="peony-petal" cx="32" cy="42" rx="16" ry="20" fill="#E6B6C0" opacity="0.85" transform="rotate(288 50 50)" style="animation-delay:0.45s"></ellipse>
+          <circle class="peony-petal" cx="50" cy="50" r="10" fill="#F2DDE1" style="animation-delay:0.6s"></circle>
+          <circle class="peony-petal" cx="50" cy="50" r="4" fill="#C9A961" style="animation-delay:0.75s"></circle>
+        </g>
+      </svg>
+    </div>
     <p class="tag" id="secretTag">Secret message unlocked</p>
-    <p>Whatever happens over these next few days, I'm genuinely proud of how hard you've worked.</p>
-    <p>Now go finish the mission. 🫡</p>
+    <p>You once told me about Pfingstrosen. I still don't know much about flowers, but apparently this one's yours now.</p>
+    <p>Whatever happens over these next few days, I'm genuinely proud of how hard you've worked. Now go finish the mission. 🫡</p>
     <button class="btn btn--ghost secret-close" id="secretClose">Close</button>
+  </div>
+</div>
+
+<!-- ============================================================
+     SECOND SECRET — the password-protected victory gift
+============================================================ -->
+<button class="vault-trigger" id="vaultTrigger" aria-label="Locked message" title="🌸">🌸</button>
+
+<div class="secret-overlay" id="vaultOverlay" role="dialog" aria-modal="true" aria-labelledby="vaultTag">
+  <div class="vault-card glass">
+    <p class="tag" id="vaultTag">Locked</p>
+    <h3>This one needs a password.</h3>
+    <p class="hint">You'll know when it's time to use it.</p>
+    <form class="vault-form" id="vaultForm">
+      <input type="password" class="vault-input" id="vaultInput" placeholder="Password" autocomplete="off" aria-label="Password">
+      <p class="vault-error" id="vaultError">Not yet. Try again once it's actually over.</p>
+      <button type="submit" class="btn btn--primary" style="justify-content:center;">Unlock</button>
+      <button type="button" class="btn btn--ghost vault-close" id="vaultClose">Close</button>
+    </form>
   </div>
 </div>
 
@@ -1274,20 +1096,69 @@
   var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   /* ---------------------------------------------------------
-     PARTICLE FIELD — a quiet drifting-dust canvas behind the
-     opening screen. Pauses off-screen and respects reduced motion.
+     EXAM CALENDAR — the only thing to edit if the dates change.
+     Format: YYYY-MM-DD, local date comparison only (no time).
+  --------------------------------------------------------- */
+  var EXAM_DAYS = ["2026-10-06", "2026-10-07", "2026-10-08"];
+
+  function todayISO(){
+    var d = new Date();
+    var y = d.getFullYear();
+    var m = String(d.getMonth() + 1).padStart(2, "0");
+    var day = String(d.getDate()).padStart(2, "0");
+    return y + "-" + m + "-" + day;
+  }
+
+  function getDayState(index){
+    // index: 0,1,2 for day 1,2,3
+    var today = todayISO();
+    var dayDate = EXAM_DAYS[index];
+    if (today > dayDate) return "done";
+    if (today === dayDate) return "current";
+    return "locked";
+  }
+
+  function getCurrentDayNumber(){
+    var today = todayISO();
+    for (var i = 0; i < EXAM_DAYS.length; i++){
+      if (today <= EXAM_DAYS[i]) return i + 1;
+    }
+    return EXAM_DAYS.length; // after everything, default to last day
+  }
+
+  var currentDay = getCurrentDayNumber();
+
+  function formatUnlockDate(iso){
+    var parts = iso.split("-");
+    var d = new Date(parseInt(parts[0],10), parseInt(parts[1],10)-1, parseInt(parts[2],10));
+    var months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    return months[d.getMonth()] + " " + d.getDate();
+  }
+
+  /* ---------------------------------------------------------
+     OPENING headline — tailored to whichever day it is
+  --------------------------------------------------------- */
+  var openDayBadge = document.getElementById("openDayBadge");
+  var openLine = document.getElementById("openLine");
+  openDayBadge.textContent = "Day " + currentDay + " of 3";
+  var openLines = {
+    1: "Final mission detected.",
+    2: "Round two. Clean slate.",
+    3: "The final stretch. Almost there."
+  };
+  openLine.textContent = openLines[currentDay] || openLines[2];
+
+  /* ---------------------------------------------------------
+     PARTICLE FIELD
   --------------------------------------------------------- */
   var canvas = document.getElementById("particleField");
   var ctx = canvas.getContext("2d");
   var particles = [];
   var particlesRunning = true;
 
-  function sizeCanvas(){
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-  }
+  function sizeCanvas(){ canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
   function makeParticles(){
-    var count = window.innerWidth < 600 ? 26 : 46;
+    var count = window.innerWidth < 600 ? 24 : 42;
     particles = [];
     for (var i = 0; i < count; i++){
       particles.push({
@@ -1309,29 +1180,19 @@
       ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
       ctx.fillStyle = "rgba(201,169,97," + p.a + ")";
       ctx.fill();
-      p.y -= p.vy;
-      p.x += p.vx;
+      p.y -= p.vy; p.x += p.vx;
       if (p.y < -5) p.y = canvas.height + 5;
       if (p.x < -5) p.x = canvas.width + 5;
       if (p.x > canvas.width + 5) p.x = -5;
     }
     requestAnimationFrame(drawParticles);
   }
-  sizeCanvas();
-  makeParticles();
-  if (!reduceMotion){
-    drawParticles();
-  } else {
-    particlesRunning = false;
-  }
-  window.addEventListener("resize", function(){
-    sizeCanvas();
-    makeParticles();
-  });
+  sizeCanvas(); makeParticles();
+  if (!reduceMotion) drawParticles(); else particlesRunning = false;
+  window.addEventListener("resize", function(){ sizeCanvas(); makeParticles(); });
 
   /* ---------------------------------------------------------
-     ENTER EXAM MODE — reveal main content, confetti burst,
-     smooth scroll into Mission Control.
+     ENTER MISSION
   --------------------------------------------------------- */
   var enterBtn = document.getElementById("enterBtn");
   var opening = document.getElementById("opening");
@@ -1340,8 +1201,8 @@
 
   function burstConfetti(){
     if (reduceMotion) return;
-    var colors = ["#C9A961", "#F2EEE4", "#8FB996"];
-    var count = window.innerWidth < 600 ? 40 : 70;
+    var colors = ["#C9A961", "#F2EEE4", "#E6B6C0"];
+    var count = window.innerWidth < 600 ? 36 : 64;
     for (var i = 0; i < count; i++){
       var piece = document.createElement("div");
       piece.className = "confetti-piece";
@@ -1350,19 +1211,15 @@
       piece.style.animationDuration = (1.8 + Math.random() * 1.4) + "s";
       piece.style.opacity = (0.6 + Math.random() * 0.4).toString();
       document.body.appendChild(piece);
-      (function(el){
-        setTimeout(function(){ el.remove(); }, 3600);
-      })(piece);
+      (function(el){ setTimeout(function(){ el.remove(); }, 3600); })(piece);
     }
   }
 
-  function enterExamMode(){
+  function enterMission(){
     if (entered) return;
     entered = true;
-
     enterBtn.textContent = "Entering...";
     enterBtn.disabled = true;
-
     burstConfetti();
 
     setTimeout(function(){
@@ -1371,31 +1228,89 @@
       opening.style.opacity = "0.0";
 
       setTimeout(function(){
-        document.getElementById("mission").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" });
+        buildStepper();
+        buildDayNav();
+        selectDay(currentDay);
+        document.getElementById("campaign").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" });
         initScrollReveal();
-        animatePrepBar();
       }, reduceMotion ? 0 : 350);
     }, reduceMotion ? 0 : 420);
   }
-
-  enterBtn.addEventListener("click", enterExamMode);
-  enterBtn.addEventListener("keydown", function(e){
-    if (e.key === "Enter" || e.key === " "){
-      e.preventDefault();
-      enterExamMode();
-    }
-  });
-  document.addEventListener("keydown", function(e){
-    if (!entered && (e.key === "Enter")){
-      enterExamMode();
-    }
-  });
+  enterBtn.addEventListener("click", enterMission);
+  enterBtn.addEventListener("keydown", function(e){ if (e.key === "Enter" || e.key === " "){ e.preventDefault(); enterMission(); } });
+  document.addEventListener("keydown", function(e){ if (!entered && e.key === "Enter") enterMission(); });
 
   /* ---------------------------------------------------------
-     SCROLL REVEAL — IntersectionObserver fade-up for .reveal
+     CAMPAIGN STEPPER
+  --------------------------------------------------------- */
+  function buildStepper(){
+    var stepper = document.getElementById("stepper");
+    var labels = ["Day 1", "Day 2", "Day 3"];
+    var html = "";
+    for (var i = 0; i < 3; i++){
+      var state = getDayState(i);
+      var dotContent = state === "done" ? "✓" : (i + 1);
+      html += '<div class="step ' + state + '"><div class="dot">' + dotContent + '</div><div class="lb">' + labels[i] + '</div></div>';
+      if (i < 2){
+        var lineDone = getDayState(i) === "done" ? "done" : "";
+        html += '<div class="step-line ' + lineDone + '"></div>';
+      }
+    }
+    stepper.innerHTML = html;
+  }
+
+  /* ---------------------------------------------------------
+     DAY NAV + PANEL SWITCHING
+  --------------------------------------------------------- */
+  function buildDayNav(){
+    var tabs = document.querySelectorAll(".day-tab");
+    tabs.forEach(function(tab){
+      var dayIndex = parseInt(tab.getAttribute("data-day"), 10) - 1;
+      var state = getDayState(dayIndex);
+      if (state === "done") tab.classList.add("is-done");
+      var label = "Day 0" + (dayIndex + 1);
+      if (state === "done") label = "✓ " + label;
+      if (state === "locked") label = label + " 🔒";
+      tab.textContent = label;
+      tab.addEventListener("click", function(e){
+        var d = parseInt(e.currentTarget.getAttribute("data-day"), 10);
+        selectDay(d);
+      });
+    });
+  }
+
+  var prepAnimated = false;
+  var checklistAnimated = false;
+
+  function selectDay(dayNum){
+    var tabs = document.querySelectorAll(".day-tab");
+    tabs.forEach(function(tab){
+      var d = parseInt(tab.getAttribute("data-day"), 10);
+      tab.setAttribute("aria-selected", d === dayNum ? "true" : "false");
+    });
+    var panels = document.querySelectorAll(".day-panel");
+    panels.forEach(function(panel){ panel.classList.remove("active"); });
+    var active = document.getElementById("panel-" + dayNum);
+    if (active) active.classList.add("active");
+
+    if (dayNum === 2 && !prepAnimated){
+      prepAnimated = true;
+      setTimeout(animatePrepBar, 150);
+    }
+    if (dayNum === 2 && !checklistAnimated){
+      // handled by its own observer below once visible
+    }
+    if (dayNum === 3){
+      setupDay3();
+    }
+    initScrollReveal();
+  }
+
+  /* ---------------------------------------------------------
+     SCROLL REVEAL
   --------------------------------------------------------- */
   function initScrollReveal(){
-    var targets = document.querySelectorAll(".reveal");
+    var targets = document.querySelectorAll(".reveal:not(.is-visible)");
     if (!("IntersectionObserver" in window) || reduceMotion){
       targets.forEach(function(t){ t.classList.add("is-visible"); });
       return;
@@ -1412,20 +1327,8 @@
   }
 
   /* ---------------------------------------------------------
-     SECTION 2 — Preparation progress bar (95%)
+     NUMBER ANIMATION HELPER
   --------------------------------------------------------- */
-  var prepDone = false;
-  function animatePrepBar(){
-    if (prepDone) return;
-    prepDone = true;
-    var fill = document.getElementById("prepFill");
-    var pct = document.getElementById("prepPct");
-    requestAnimationFrame(function(){
-      fill.style.width = "95%";
-    });
-    animateNumber(pct, 0, 95, reduceMotion ? 0 : 1500, "%");
-  }
-
   function animateNumber(el, from, to, duration, suffix){
     if (duration <= 0){ el.textContent = to + (suffix || ""); return; }
     var start = null;
@@ -1441,57 +1344,54 @@
   }
 
   /* ---------------------------------------------------------
-     SECTION 4 — Fight the boss
+     DAY 2 — PREP BAR
+  --------------------------------------------------------- */
+  function animatePrepBar(){
+    var fill = document.getElementById("prepFill");
+    var pct = document.getElementById("prepPct");
+    if (!fill) return;
+    requestAnimationFrame(function(){ fill.style.width = "95%"; });
+    animateNumber(pct, 0, 95, reduceMotion ? 0 : 1500, "%");
+  }
+
+  /* ---------------------------------------------------------
+     DAY 2 — FIGHT THE BOSS
   --------------------------------------------------------- */
   var fightBtn = document.getElementById("fightBtn");
-  var hpFill = document.getElementById("hpFill");
-  var hpPct = document.getElementById("hpPct");
-  var bossResult = document.getElementById("bossResult");
-  var roundTrack = document.getElementById("roundTrack");
   var fought = false;
-
-  fightBtn.addEventListener("click", function(){
-    if (fought) return;
-    fought = true;
-    fightBtn.textContent = "Attacking...";
-    fightBtn.disabled = true;
-
-    requestAnimationFrame(function(){
-      hpFill.style.width = "0%";
+  if (fightBtn){
+    fightBtn.addEventListener("click", function(){
+      if (fought) return;
+      fought = true;
+      fightBtn.textContent = "Attacking...";
+      fightBtn.disabled = true;
+      var hpFill = document.getElementById("hpFill");
+      var hpPct = document.getElementById("hpPct");
+      requestAnimationFrame(function(){ hpFill.style.width = "0%"; });
+      animateNumber(hpPct, 100, 0, reduceMotion ? 0 : 1600, "%");
+      setTimeout(function(){
+        document.getElementById("bossResult").classList.add("show");
+        fightBtn.textContent = "Victory ✓";
+      }, reduceMotion ? 0 : 1500);
     });
-    animateNumber(hpPct, 100, 0, reduceMotion ? 0 : 1600, "%");
-
-    setTimeout(function(){
-      bossResult.classList.add("show");
-      roundTrack.classList.add("show");
-      fightBtn.textContent = "Victory ✓";
-
-      // step through rounds
-      var r1 = document.getElementById("r1");
-      var r2 = document.getElementById("r2");
-      var r3 = document.getElementById("r3");
-      r1.classList.add("active");
-      setTimeout(function(){ r2.classList.add("active"); }, 400);
-      setTimeout(function(){ r3.classList.add("active"); }, 800);
-    }, reduceMotion ? 0 : 1500);
-  });
+  }
 
   /* ---------------------------------------------------------
-     SECTION 5 — Accept responsibility
+     DAY 2 — ACCEPT MISSION
   --------------------------------------------------------- */
   var acceptBtn = document.getElementById("acceptBtn");
-  var acceptConfirm = document.getElementById("acceptConfirm");
-  acceptBtn.addEventListener("click", function(){
-    acceptConfirm.classList.add("show");
-    acceptBtn.textContent = "Responsibility accepted ✓";
-    acceptBtn.disabled = true;
-  });
+  if (acceptBtn){
+    acceptBtn.addEventListener("click", function(){
+      document.getElementById("acceptConfirm").classList.add("show");
+      acceptBtn.textContent = "Mission accepted ✓";
+      acceptBtn.disabled = true;
+    });
+  }
 
   /* ---------------------------------------------------------
-     SECTION 6 — Flip cards
+     FLIP CARDS
   --------------------------------------------------------- */
-  var cards = document.querySelectorAll(".flip-card");
-  cards.forEach(function(card){
+  document.querySelectorAll(".flip-card").forEach(function(card){
     card.addEventListener("click", function(){
       var expanded = card.getAttribute("aria-expanded") === "true";
       card.setAttribute("aria-expanded", expanded ? "false" : "true");
@@ -1499,20 +1399,20 @@
   });
 
   /* ---------------------------------------------------------
-     SECTION 8 — Emergency kit
+     DAY 2 — EMERGENCY KIT
   --------------------------------------------------------- */
   var kitMessages = {
     coffee: "+10 concentration\n+20 questionable decisions\n+50% Steuerberater energy",
-    brain: "Please remain switched on for the next 2–3 days.",
-    confidence: "Remember who survived all those study sessions.",
+    brain: "Please remain switched on for the next 48 hours.",
+    confidence: "Remember who survived Day 1 and still showed up today.",
     knowledge: "It's in there somewhere. Trust the system. 😂",
-    motivation: "Future Raphaela is counting on current Raphaela."
+    reset: "Yesterday: filed. Today: a new attempt. That's the whole reset."
   };
   var kitOutput = document.getElementById("kitOutput");
-  var kitButtons = document.querySelectorAll(".kit-btn");
-  kitButtons.forEach(function(btn){
+  document.querySelectorAll(".kit-btn").forEach(function(btn){
     btn.addEventListener("click", function(){
       var key = btn.getAttribute("data-kit");
+      if (!kitOutput) return;
       kitOutput.classList.remove("show");
       requestAnimationFrame(function(){
         kitOutput.textContent = kitMessages[key];
@@ -1522,26 +1422,18 @@
   });
 
   /* ---------------------------------------------------------
-     SECTION 9 — Exam mode checklist, items appear one by one
-     when scrolled into view
+     DAY 2 — CHECKLIST, animates in once visible
   --------------------------------------------------------- */
   var checklistEl = document.getElementById("checklist");
-  var checklistDone = false;
-  function runChecklist(){
-    if (checklistDone) return;
-    checklistDone = true;
-    var items = checklistEl.querySelectorAll("li");
-    items.forEach(function(li, i){
-      setTimeout(function(){
-        li.classList.add("show");
-      }, reduceMotion ? 0 : i * 260);
-    });
-  }
-  if ("IntersectionObserver" in window){
+  if (checklistEl && "IntersectionObserver" in window){
     var checklistObserver = new IntersectionObserver(function(entries){
       entries.forEach(function(entry){
-        if (entry.isIntersecting){
-          runChecklist();
+        if (entry.isIntersecting && !checklistAnimated){
+          checklistAnimated = true;
+          var items = checklistEl.querySelectorAll("li");
+          items.forEach(function(li, i){
+            setTimeout(function(){ li.classList.add("show"); }, reduceMotion ? 0 : i * 250);
+          });
           checklistObserver.disconnect();
         }
       });
@@ -1550,57 +1442,390 @@
   }
 
   /* ---------------------------------------------------------
-     SECTION 10 — Finale progress bar (95%), runs on scroll into view
+     DAY 3 — lock / unlock based on date
   --------------------------------------------------------- */
-  var finaleEl = document.getElementById("finaleProgress");
-  var finaleDone = false;
-  function runFinale(){
-    if (finaleDone) return;
-    finaleDone = true;
-    var fill = document.getElementById("finaleFill");
-    var pct = document.getElementById("finalePct");
-    requestAnimationFrame(function(){
-      fill.style.width = "95%";
-    });
-    animateNumber(pct, 0, 95, reduceMotion ? 0 : 1500, "%");
-  }
-  if ("IntersectionObserver" in window){
-    var finaleObserver = new IntersectionObserver(function(entries){
-      entries.forEach(function(entry){
-        if (entry.isIntersecting){
-          runFinale();
-          finaleObserver.disconnect();
-        }
-      });
-    }, { threshold: 0.4 });
-    finaleObserver.observe(finaleEl);
+  var day3Set = false;
+  function setupDay3(){
+    if (day3Set) return;
+    day3Set = true;
+    var state = getDayState(2);
+    var locked = document.getElementById("day3Locked");
+    var unlocked = document.getElementById("day3Unlocked");
+    if (state === "locked"){
+      document.getElementById("unlockDate").textContent = "Unlocks " + formatUnlockDate(EXAM_DAYS[2]);
+      locked.hidden = false;
+      unlocked.hidden = true;
+    } else {
+      locked.hidden = true;
+      unlocked.hidden = false;
+    }
+    initScrollReveal();
   }
 
   /* ---------------------------------------------------------
-     SECRET SURPRISE
+     SECRET PEONY
   --------------------------------------------------------- */
   var secretTrigger = document.getElementById("secretTrigger");
   var secretOverlay = document.getElementById("secretOverlay");
   var secretClose = document.getElementById("secretClose");
-
-  function openSecret(){
-    secretOverlay.classList.add("show");
-    secretClose.focus();
-  }
-  function closeSecret(){
-    secretOverlay.classList.remove("show");
-    secretTrigger.focus();
-  }
+  function openSecret(){ secretOverlay.classList.add("show"); secretClose.focus(); }
+  function closeSecret(){ secretOverlay.classList.remove("show"); secretTrigger.focus(); }
   secretTrigger.addEventListener("click", openSecret);
   secretClose.addEventListener("click", closeSecret);
-  secretOverlay.addEventListener("click", function(e){
-    if (e.target === secretOverlay) closeSecret();
-  });
-  document.addEventListener("keydown", function(e){
-    if (e.key === "Escape" && secretOverlay.classList.contains("show")){
-      closeSecret();
+  secretOverlay.addEventListener("click", function(e){ if (e.target === secretOverlay) closeSecret(); });
+  document.addEventListener("keydown", function(e){ if (e.key === "Escape" && secretOverlay.classList.contains("show")) closeSecret(); });
+
+  /* ---------------------------------------------------------
+     VAULT — password-protected victory gift. Checked client-side,
+     so it's a fun gate rather than real security; the password is
+     only ever compared, never exposed in the UI.
+  --------------------------------------------------------- */
+  var VAULT_PASSWORD = "nowthateverythingisout";
+  var vaultTrigger = document.getElementById("vaultTrigger");
+  var vaultOverlay = document.getElementById("vaultOverlay");
+  var vaultClose = document.getElementById("vaultClose");
+  var vaultForm = document.getElementById("vaultForm");
+  var vaultInput = document.getElementById("vaultInput");
+  var vaultError = document.getElementById("vaultError");
+  var celebration = document.getElementById("celebration");
+  var celebrationUnlocked = false;
+
+  function openVault(){
+    vaultOverlay.classList.add("show");
+    vaultError.classList.remove("show");
+    vaultInput.value = "";
+    setTimeout(function(){ vaultInput.focus(); }, 50);
+  }
+  function closeVault(){
+    vaultOverlay.classList.remove("show");
+    vaultTrigger.focus();
+  }
+  vaultTrigger.addEventListener("click", openVault);
+  vaultClose.addEventListener("click", closeVault);
+  vaultOverlay.addEventListener("click", function(e){ if (e.target === vaultOverlay) closeVault(); });
+  document.addEventListener("keydown", function(e){ if (e.key === "Escape" && vaultOverlay.classList.contains("show")) closeVault(); });
+
+  vaultForm.addEventListener("submit", function(e){
+    e.preventDefault();
+    var entered = vaultInput.value.trim();
+    if (entered === VAULT_PASSWORD){
+      closeVault();
+      unlockCelebration();
+    } else {
+      vaultError.classList.add("show");
+      vaultInput.classList.remove("shake");
+      void vaultInput.offsetWidth; // restart animation
+      vaultInput.classList.add("shake");
     }
   });
+
+  function unlockCelebration(){
+    if (celebrationUnlocked) return;
+    celebrationUnlocked = true;
+    celebration.classList.add("unlocked");
+    burstConfetti();
+    runVictoryShow();
+    initScrollReveal();
+    setTimeout(function(){
+      celebration.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" });
+    }, reduceMotion ? 0 : 150);
+  }
+
+  /* ---------------------------------------------------------
+     VICTORY SHOW — fireworks (with sound) + falling peony
+     confetti, running for ~30 seconds once the vault is unlocked.
+  --------------------------------------------------------- */
+  var audioCtx = null;
+  function getAudioCtx(){
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    if (!audioCtx) audioCtx = new AC();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    return audioCtx;
+  }
+
+  function playFireworkBoom(panValue){
+    var ctx = getAudioCtx();
+    if (!ctx) return;
+    var now = ctx.currentTime;
+
+    var hasPanner = typeof ctx.createStereoPanner === "function";
+    var pan = hasPanner ? ctx.createStereoPanner() : null;
+    if (pan){
+      pan.pan.value = Math.max(-1, Math.min(1, panValue || 0));
+      pan.connect(ctx.destination);
+    }
+    var out = pan || ctx.destination;
+
+    function noiseBurst(opts){
+      // opts: delay, duration, freq, type ("bandpass"/"highpass"/"lowpass"), q, peak
+      var start = now + (opts.delay || 0);
+      var dur = opts.duration;
+      var bufferSize = Math.max(1, Math.floor(ctx.sampleRate * dur));
+      var buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      var data = buffer.getChannelData(0);
+      for (var i = 0; i < bufferSize; i++){
+        data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 1.6);
+      }
+      var src = ctx.createBufferSource();
+      src.buffer = buffer;
+
+      var filter = ctx.createBiquadFilter();
+      filter.type = opts.type;
+      filter.frequency.value = opts.freq;
+      if (opts.q) filter.Q.value = opts.q;
+
+      var gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(opts.peak, start + Math.min(0.012, dur * 0.15));
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+
+      src.connect(filter).connect(gain).connect(out);
+      src.start(start);
+      src.stop(start + dur);
+    }
+
+    // sharp transient "crack" — the initial snap of the burst
+    noiseBurst({ delay: 0, duration: 0.12, freq: 2800 + Math.random() * 1200, type: "highpass", q: 0.9, peak: 0.38 });
+
+    // deep "boom" body — a wide noise bed filtered low, with a bit of rumble
+    noiseBurst({ delay: 0, duration: 0.55 + Math.random() * 0.2, freq: 450 + Math.random() * 250, type: "lowpass", q: 0.5, peak: 0.3 });
+
+    // sub-bass thump for physical weight
+    var osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(140, now);
+    osc.frequency.exponentialRampToValueAtTime(38, now + 0.32);
+    var oscGain = ctx.createGain();
+    oscGain.gain.setValueAtTime(0.0001, now);
+    oscGain.gain.exponentialRampToValueAtTime(0.26, now + 0.01);
+    oscGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.36);
+    osc.connect(oscGain).connect(out);
+    osc.start(now);
+    osc.stop(now + 0.36);
+
+    // crackle tail — scattered high, short pops trailing after the main boom,
+    // like the secondary stars breaking apart. Count and timing randomized
+    // per firework so the show doesn't sound mechanically repetitive.
+    var crackleCount = 5 + Math.floor(Math.random() * 6);
+    var tailEnd = 0.1;
+    for (var c = 0; c < crackleCount; c++){
+      var delay = 0.08 + Math.random() * 0.55;
+      tailEnd = Math.max(tailEnd, delay + 0.08);
+      noiseBurst({
+        delay: delay,
+        duration: 0.05 + Math.random() * 0.05,
+        freq: 3500 + Math.random() * 3000,
+        type: "bandpass",
+        q: 1.2,
+        peak: 0.08 + Math.random() * 0.1
+      });
+    }
+  }
+
+  function runVictoryShow(){
+    if (reduceMotion) return; // burstConfetti() already gave a brief, static-friendly moment
+
+    getAudioCtx(); // warm up / unlock audio within this user-gesture call chain
+
+    var DURATION = 30000;
+    var fwCanvas = document.getElementById("fireworksCanvas");
+    var fwCtx = fwCanvas.getContext("2d");
+    var fwParticles = [];
+    var petals = [];
+    var startTime = null;
+    var rafId = null;
+    var fireworkTimer = null;
+    var petalTimer = null;
+
+    function sizeFwCanvas(){ fwCanvas.width = window.innerWidth; fwCanvas.height = window.innerHeight; }
+    sizeFwCanvas();
+    window.addEventListener("resize", sizeFwCanvas);
+
+    var FW_COLORS = ["#C9A961", "#E6B6C0", "#F2EEE4", "#8FB996"];
+
+    function spawnFirework(){
+      var w = fwCanvas.width, h = fwCanvas.height;
+      var x = w * (0.15 + Math.random() * 0.7);
+      var y = h * (0.15 + Math.random() * 0.4);
+      var count = 36 + Math.floor(Math.random() * 24);
+      var color = FW_COLORS[Math.floor(Math.random() * FW_COLORS.length)];
+      playFireworkBoom((x / w) * 2 - 1);
+      for (var i = 0; i < count; i++){
+        var angle = (Math.PI * 2 * i) / count + Math.random() * 0.2;
+        var speed = 1.6 + Math.random() * 3.4;
+        fwParticles.push({
+          x: x, y: y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          color: color,
+          life: 0,
+          maxLife: 55 + Math.random() * 30
+        });
+      }
+    }
+
+    function renderFireworks(){
+      var w = fwCanvas.width, h = fwCanvas.height;
+      fwCtx.fillStyle = "rgba(10,13,18,0.16)";
+      fwCtx.fillRect(0, 0, w, h);
+      fwCtx.globalCompositeOperation = "lighter";
+      for (var i = fwParticles.length - 1; i >= 0; i--){
+        var p = fwParticles[i];
+        p.vy += 0.045; // gravity
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life++;
+        var alpha = Math.max(0, 1 - p.life / p.maxLife);
+        if (alpha <= 0){ fwParticles.splice(i, 1); continue; }
+        fwCtx.beginPath();
+        fwCtx.arc(p.x, p.y, 2.1, 0, Math.PI * 2);
+        fwCtx.fillStyle = p.color;
+        fwCtx.globalAlpha = alpha;
+        fwCtx.fill();
+      }
+      fwCtx.globalAlpha = 1;
+      fwCtx.globalCompositeOperation = "source-over";
+    }
+
+    function spawnPetal(){
+      var edge = ["top", "left", "right"][Math.floor(Math.random() * 3)];
+      var w = window.innerWidth, h = window.innerHeight;
+      var x, y, vx, vy;
+      if (edge === "top"){
+        x = Math.random() * w; y = -30;
+        vx = (Math.random() - 0.5) * 1.2; vy = 1.3 + Math.random() * 1.4;
+      } else if (edge === "left"){
+        x = -30; y = Math.random() * h * 0.6;
+        vx = 1.4 + Math.random() * 1.6; vy = 0.9 + Math.random() * 1.1;
+      } else {
+        x = w + 30; y = Math.random() * h * 0.6;
+        vx = -(1.4 + Math.random() * 1.6); vy = 0.9 + Math.random() * 1.1;
+      }
+      var el = document.createElement("div");
+      el.className = "falling-petal";
+      el.textContent = "🌸";
+      el.setAttribute("aria-hidden", "true");
+      el.style.opacity = (0.65 + Math.random() * 0.35).toString();
+      document.body.appendChild(el);
+
+      var petal = { el: el, x: x, y: y, vx: vx, vy: vy, rot: Math.random() * 360, spin: (Math.random() - 0.5) * 4, age: 0 };
+      petals.push(petal);
+    }
+
+    function renderPetals(){
+      var w = window.innerWidth, h = window.innerHeight;
+      for (var i = petals.length - 1; i >= 0; i--){
+        var p = petals[i];
+        p.x += p.vx; p.y += p.vy; p.rot += p.spin; p.age++;
+        p.el.style.transform = "translate3d(" + p.x + "px," + p.y + "px,0) rotate(" + p.rot + "deg)";
+        var outOfBounds = p.y > h + 40 || p.x < -60 || p.x > w + 60;
+        if (outOfBounds || p.age > 900){
+          p.el.remove();
+          petals.splice(i, 1);
+        }
+      }
+    }
+
+    function loop(ts){
+      if (!startTime) startTime = ts;
+      renderFireworks();
+      renderPetals();
+      if (ts - startTime < DURATION + 2500){
+        rafId = requestAnimationFrame(loop);
+      } else {
+        finish();
+      }
+    }
+
+    function finish(){
+      if (rafId) cancelAnimationFrame(rafId);
+      clearInterval(fireworkTimer);
+      clearInterval(petalTimer);
+      window.removeEventListener("resize", sizeFwCanvas);
+      fwCtx.clearRect(0, 0, fwCanvas.width, fwCanvas.height);
+      petals.forEach(function(p){ p.el.remove(); });
+      petals = [];
+    }
+
+    fireworkTimer = setInterval(spawnFirework, 550 + Math.random() * 350);
+    petalTimer = setInterval(spawnPetal, 300 + Math.random() * 250);
+    spawnFirework();
+    spawnPetal();
+    rafId = requestAnimationFrame(loop);
+    setTimeout(function(){ clearInterval(fireworkTimer); }, DURATION);
+    setTimeout(function(){ clearInterval(petalTimer); }, DURATION);
+  }
+
+  /* ---------------------------------------------------------
+     CERTIFICATE DOWNLOAD — captures the on-screen card exactly as
+     rendered (html2canvas) and drops that image into a landscape
+     PDF (jsPDF), so the file matches the website pixel-for-pixel
+     instead of being redrawn by hand. Falls back to the browser's
+     print-to-PDF if either library fails to load.
+  --------------------------------------------------------- */
+  var downloadCertBtn = document.getElementById("downloadCertBtn");
+  if (downloadCertBtn){
+    downloadCertBtn.addEventListener("click", function(){
+      if (window.html2canvas && window.jspdf && window.jspdf.jsPDF){
+        downloadCertBtn.disabled = true;
+        var originalLabel = downloadCertBtn.textContent;
+        downloadCertBtn.textContent = "Preparing...";
+        downloadCertificatePdfFromScreenshot().then(function(){
+          downloadCertBtn.disabled = false;
+          downloadCertBtn.textContent = originalLabel;
+        }).catch(function(){
+          downloadCertBtn.disabled = false;
+          downloadCertBtn.textContent = originalLabel;
+          printFallback();
+        });
+      } else {
+        printFallback();
+      }
+    });
+  }
+  function printFallback(){
+    document.body.classList.add("printing-cert");
+    window.print();
+  }
+  window.addEventListener("afterprint", function(){
+    document.body.classList.remove("printing-cert");
+  });
+
+  function downloadCertificatePdfFromScreenshot(){
+    var certEl = document.getElementById("certificateCard");
+    return window.html2canvas(certEl, {
+      backgroundColor: "#0A0D12",
+      scale: Math.min(3, window.devicePixelRatio * 2 || 2),
+      useCORS: true
+    }).then(function(canvas){
+      var imgData = canvas.toDataURL("image/png");
+      var jsPDF = window.jspdf.jsPDF;
+      var cardW = certEl.offsetWidth;
+      var cardH = certEl.offsetHeight;
+
+      var doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+      var pageW = doc.internal.pageSize.getWidth();
+      var pageH = doc.internal.pageSize.getHeight();
+
+      // dark backdrop matching the site, so there's no white border
+      // around the captured card
+      doc.setFillColor("#05070A");
+      doc.rect(0, 0, pageW, pageH, "F");
+
+      var margin = 28;
+      var maxW = pageW - margin * 2;
+      var maxH = pageH - margin * 2;
+      var scale = Math.min(maxW / cardW, maxH / cardH);
+      var drawW = cardW * scale;
+      var drawH = cardH * scale;
+      var offsetX = (pageW - drawW) / 2;
+      var offsetY = (pageH - drawH) / 2;
+
+      doc.addImage(imgData, "PNG", offsetX, offsetY, drawW, drawH);
+      doc.save("Raphaela-Certificate-of-Recognition.pdf");
+    });
+  }
 
 })();
 </script>
