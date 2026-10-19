@@ -240,6 +240,111 @@
   }
   @keyframes confettiFall{ to{ transform: translateY(110vh) rotate(540deg); opacity: 0.2; } }
 
+  /* ============================================================
+     CARE SCREEN — an internal memo, not a game. Same premium
+     document language as the rest of the site (gold, glass,
+     Fraunces), styled like a formal notice with a dry sense of
+     humor underneath — not emoji toys.
+  ============================================================ */
+  #careScreen{
+    position: relative;
+    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 72px var(--edge) 64px;
+    isolation: isolate;
+  }
+  #careScreen::before{
+    content: "";
+    position: absolute;
+    inset: -20%;
+    background:
+      radial-gradient(circle at 18% 20%, rgba(230,182,192,0.11), transparent 45%),
+      radial-gradient(circle at 84% 80%, rgba(201,169,97,0.08), transparent 42%);
+    z-index: -1;
+  }
+  .care-head{ text-align: center; max-width: 640px; margin: 0 auto; }
+  .care-head .headline{ margin-bottom: 6px; }
+  .care-tag{
+    font-size: 14px; color: var(--bone-dim); font-style: italic; font-family: var(--serif);
+    margin-bottom: 36px;
+  }
+
+  .memo{
+    position: relative;
+    width: 100%; max-width: 640px; margin: 0 auto;
+    padding: 36px 38px;
+  }
+  .memo-grid{
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px 24px;
+    padding-bottom: 24px; margin-bottom: 24px;
+    border-bottom: 1px dashed var(--panel-brd);
+  }
+  .memo-grid .k{
+    font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--bone-faint); font-weight: 700; display: block; margin-bottom: 5px;
+  }
+  .memo-grid .v{ font-size: 14.5px; color: var(--bone); }
+  .memo-grid .v.gold{ color: var(--gold); }
+
+  .memo-body p{
+    font-size: 15.5px; color: var(--bone); line-height: 1.75; margin-bottom: 14px; text-align: left;
+  }
+  .memo-body p:last-child{ margin-bottom: 0; }
+
+  .memo-orders{ margin-top: 30px; }
+  .orders-label{
+    font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--bone-faint); font-weight: 700; margin-bottom: 14px;
+  }
+  .memo-orders .card-grid{ gap: 10px; }
+  .memo-orders .flip-card{ padding: 16px 18px; }
+  .memo-orders .fc-title{ font-size: 15px; }
+
+  .memo-sign{
+    margin-top: 34px; padding-top: 22px; border-top: 1px dashed var(--panel-brd);
+    display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 18px;
+  }
+  .memo-sign .sig{ font-family: var(--serif); font-style: italic; font-size: 17px; color: var(--bone); margin: 0; }
+  .memo-sign .role{ font-size: 11.5px; color: var(--bone-faint); margin-top: 2px; }
+
+  .stamp{
+    position: absolute; right: 30px; bottom: 26px; z-index: 5;
+    width: 108px; height: 108px; border-radius: 50%;
+    border: 2.5px solid var(--danger); color: var(--danger);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase;
+    text-align: center; line-height: 1.5;
+    transform: rotate(-11deg) scale(0); opacity: 0;
+    transition: transform 0.45s cubic-bezier(.34,1.56,.64,1), opacity 0.2s ease;
+    pointer-events: none;
+    mix-blend-mode: normal;
+  }
+  .stamp.show{ transform: rotate(-11deg) scale(1); opacity: 0.85; }
+  .stamp .stamp-line{ width: 46px; height: 1.5px; background: var(--danger); margin: 4px 0; opacity: 0.7; }
+
+  .care-signoff{
+    margin-top: 48px; font-family: var(--serif); font-size: clamp(20px, 4.6vw, 26px); text-align: center;
+  }
+  .care-signoff .heart{ color: var(--danger); }
+  .care-sig{ margin-top: 12px; font-family: var(--serif); font-style: italic; font-size: 14.5px; color: var(--bone-faint); text-align: center; }
+  .care-link{
+    display: block; text-align: center; margin: 44px auto 0; width: fit-content;
+    font-size: 11.5px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--bone-faint); text-decoration: none;
+    border-bottom: 1px dotted var(--panel-brd); padding-bottom: 2px;
+    transition: color 0.25s ease, border-color 0.25s ease;
+  }
+  .care-link:hover{ color: var(--gold); border-color: var(--gold); }
+
+  @media (max-width: 560px){
+    .memo-grid{ grid-template-columns: 1fr; }
+    .stamp{ position: static; margin: 20px auto 0; }
+    .memo-sign{ flex-direction: column; align-items: flex-start; }
+  }
+
   /* ---------- CAMPAIGN STEPPER ---------- */
   #campaign{ padding-top: 56px; padding-bottom: 20px; text-align: center; }
   .stepper{
@@ -665,6 +770,80 @@
 
 <canvas id="particleField" aria-hidden="true"></canvas>
 <canvas id="fireworksCanvas" aria-hidden="true"></canvas>
+
+<!-- ============================================================
+     CARE SCREEN — the new default landing page. She's been sick
+     since yesterday with her first day of work tomorrow, so this
+     comes first now; the old exam mission is still one scroll (or
+     one click) away for anyone who wants to revisit it.
+============================================================ -->
+<section id="careScreen">
+  <div class="care-head">
+    <span class="eyebrow rose">Internal memo</span>
+    <h1 class="headline">Sick Leave: Approved</h1>
+    <p class="care-tag">(Retroactively. Filed one day late, as is tradition.)</p>
+  </div>
+
+  <div class="memo glass">
+    <div class="memo-grid">
+      <div><span class="k">To</span><span class="v">Raphaela Drechsel</span></div>
+      <div><span class="k">From</span><span class="v">Department of Friendship</span></div>
+      <div><span class="k">Re</span><span class="v">Flu, new job, bad timing</span></div>
+      <div><span class="k">Status</span><span class="v gold">Approved — no appeal necessary</span></div>
+    </div>
+
+    <div class="memo-body">
+      <p>This is to formally acknowledge your message from yesterday, which has gone unanswered for approximately 24 hours. Processing delay, not disinterest.</p>
+      <p>Having reviewed the case — flu, a mandatory first day of work, generally poor timing by the universe — this office finds entirely in your favor.</p>
+      <p>Whether you reported for duty today or exercised your right to stay horizontal, both decisions are hereby approved without further questioning. This office also notes you will probably check your work email "just once" regardless of what this memo says. We ask, without much hope, that you don't.</p>
+    </div>
+
+    <div class="memo-orders">
+      <p class="orders-label">Doctor's orders</p>
+      <div class="card-grid">
+        <button class="flip-card glass" aria-expanded="false">
+          <div class="fc-top"><span class="fc-title">01 — Zwiebelsocken</span><span class="fc-icon" aria-hidden="true">+</span></div>
+          <div class="fc-body"><p>Raw onion in your socks, overnight. The science is unverified. The tradition is not optional.</p></div>
+        </button>
+        <button class="flip-card glass" aria-expanded="false">
+          <div class="fc-top"><span class="fc-title">02 — Wadenwickel</span><span class="fc-icon" aria-hidden="true">+</span></div>
+          <div class="fc-body"><p>Cool, damp cloths wrapped around the calves to bring a fever down. Looks medieval. Works anyway.</p></div>
+        </button>
+        <button class="flip-card glass" aria-expanded="false">
+          <div class="fc-top"><span class="fc-title">03 — Hühnersuppe</span><span class="fc-icon" aria-hidden="true">+</span></div>
+          <div class="fc-body"><p>Chicken soup. The one remedy with no dissenting opinions, in any country.</p></div>
+        </button>
+        <button class="flip-card glass" aria-expanded="false">
+          <div class="fc-top"><span class="fc-title">04 — Wärmflasche</span><span class="fc-icon" aria-hidden="true">+</span></div>
+          <div class="fc-body"><p>A hot water bottle. Standard-issue equipment in this household, not a suggestion.</p></div>
+        </button>
+        <button class="flip-card glass" aria-expanded="false">
+          <div class="fc-top"><span class="fc-title">05 — Actual rest</span><span class="fc-icon" aria-hidden="true">+</span></div>
+          <div class="fc-body"><p>Uninterrupted. Horizontal. Laptop closed. Yes, that includes "just checking one thing."</p></div>
+        </button>
+      </div>
+    </div>
+
+    <div class="memo-sign">
+      <div>
+        <p class="sig">Zohaib</p>
+        <p class="role">Chief Encouragement Officer</p>
+      </div>
+      <button class="btn btn--ghost" id="stampBtn">Apply official stamp</button>
+    </div>
+
+    <div class="stamp" id="stampMark" aria-hidden="true">
+      Approved
+      <span class="stamp-line"></span>
+      Sick Leave
+    </div>
+  </div>
+
+  <p class="care-signoff">Get well soon, Raphaela <span class="heart">❤️</span></p>
+  <p class="care-sig">— Zohaib</p>
+
+  <a class="care-link" href="#opening">or revisit the mission ↓</a>
+</section>
 
 <!-- ============================================================
      OPENING — day-aware headline, filled in by JS on load
@@ -1411,7 +1590,7 @@
     reset: "Yesterday: filed. Today: a new attempt. That's the whole reset."
   };
   var kitOutput = document.getElementById("kitOutput");
-  document.querySelectorAll(".kit-btn").forEach(function(btn){
+  document.querySelectorAll("#kit-wrap .kit-btn").forEach(function(btn){
     btn.addEventListener("click", function(){
       var key = btn.getAttribute("data-kit");
       if (!kitOutput) return;
@@ -1422,6 +1601,21 @@
       });
     });
   });
+
+  /* ---------------------------------------------------------
+     CARE SCREEN — the stamp. The five "doctor's orders" cards
+     reuse the site's existing .flip-card component and are
+     already wired up by the global flip-card handler above.
+  --------------------------------------------------------- */
+  var stampBtn = document.getElementById("stampBtn");
+  var stampMark = document.getElementById("stampMark");
+  if (stampBtn && stampMark){
+    stampBtn.addEventListener("click", function(){
+      stampMark.classList.add("show");
+      stampBtn.textContent = "Stamped ✓";
+      stampBtn.disabled = true;
+    });
+  }
 
   /* ---------------------------------------------------------
      DAY 2 — CHECKLIST, animates in once visible
